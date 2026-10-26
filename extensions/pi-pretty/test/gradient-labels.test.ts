@@ -151,4 +151,26 @@ describe("gradient labels", () => {
 
 		expect(firstOut).not.toBe(secondOut);
 	});
+
+	it("rebuilds the same label after re-install, so a theme swap is not served from cache", () => {
+		const themeSettings = resolveWorkingIndicatorSettings(
+			{ enabled: true, mode: "shimmer", text: "Working…", low: "dim", mid: "muted", high: "accent" },
+			{},
+		);
+		const themeA = { getFgAnsi: () => "\x1b[38;2;1;1;1m" };
+		const themeB = { getFgAnsi: () => "\x1b[38;2;2;2;2m" };
+
+		installGradientLabels({ settings: themeSettings, getTheme: () => themeA as never });
+		const first = hostLoader("Compacting context...");
+		first.setMessage("Compacting context...");
+		const firstOut = first.render(120).join("\n");
+
+		// Same label text, new theme: the cached frames must not win.
+		installGradientLabels({ settings: themeSettings, getTheme: () => themeB as never });
+		const second = hostLoader("Compacting context...");
+		second.setMessage("Compacting context...");
+		const secondOut = second.render(120).join("\n");
+
+		expect(firstOut).not.toBe(secondOut);
+	});
 });

@@ -55,12 +55,32 @@ export interface GradientLabelOptions {
 /** Frames built per label, so the 30fps tick never rebuilds them. */
 const frameCache = new Map<string, { frames: string[]; intervalMs: number }>();
 
+/**
+ * Cache key: the label plus everything the frames are painted from. The label
+ * alone is not enough — a `/theme` swap or a re-install with different settings
+ * keeps the same text and would otherwise be served stale colours forever.
+ */
+function cacheKey(text: string, settings: WorkingIndicatorSettings, theme: WorkingThemeLike | undefined): string {
+	const palette = resolvePaletteAnsi(settings.palette, theme);
+	return [
+		text,
+		settings.mode,
+		settings.stops?.join("|") ?? "",
+		settings.bold ? "b" : "-",
+		settings.intervalMs ?? WORKING_INTERVAL_MS,
+		palette.low,
+		palette.mid,
+		palette.high,
+	].join("\u0001");
+}
+
 function buildForLabel(
 	text: string,
 	settings: WorkingIndicatorSettings,
 	theme: WorkingThemeLike | undefined,
 ): { frames: string[]; intervalMs: number } | undefined {
-	const cached = frameCache.get(text);
+	const key = cacheKey(text, settings, theme);
+	const cached = frameCache.get(key);
 	if (cached) return cached;
 
 	const { frames, intervalMs } = buildWorkingFrames([text], {
@@ -78,7 +98,7 @@ function buildForLabel(
 	const built = { frames, intervalMs };
 	// Labels are short and few; cap so a pathological host loop cannot grow this.
 	if (frameCache.size > 64) frameCache.clear();
-	frameCache.set(text, built);
+	frameCache.set(key, built);
 	return built;
 }
 
