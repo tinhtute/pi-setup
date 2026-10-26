@@ -23,11 +23,6 @@ const expected = [
 	"npm:pi-memory",
 	"npm:pi-subagents@0.81.0",
 	"npm:@narumitw/pi-goal",
-	// Swapped in on 2026-10-23 for pi-lsp-extension + context-mode. Both covered jobs
-	// the TUI never used: pi-lens carries diagnostics, symbol search and the structural
-	// ast-grep tools in one package, so the second LSP client pool is gone and the
-	// tool-output sandbox (which overlapped /rewind and pi-memory) with it.
-	"npm:pi-lens@4.4.4",
 	// Vendored 2026-10-23: pi-pretty was forked into extensions/pi-pretty so its
 	// renderer can be changed (working-indicator split, gradient work) without
 	// shipping a private npm package. Upstream v0.8.0, MIT. It adds no tool of its
@@ -54,6 +49,10 @@ for (const dropped of [
 	// already owns memory, so neither had a job left.
 	"npm:pi-lsp-extension",
 	"npm:context-mode",
+	// pi-lens replaced both on 2026-10-23 and was itself dropped on 2026-10-26: it
+	// never earned its schema cost (five always-on tools plus an on-demand
+	// activation path), so code intelligence is back to plain grep/read.
+	"npm:pi-lens",
 	// pi-pigment (render-only decorators for the eight built-in tool renderers) was
 	// added to the template on 2026-10-21 and reverted on 2026-10-22. It hooks the
 	// same internal renderer surface that retired code-block.ts, and it was never
