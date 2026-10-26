@@ -26,7 +26,6 @@ bash setup/install.sh --dry-run
 | `extensions/account-pool/` | `~/.pi/agent/extensions/account-pool/` | Multi-file extension: Antigravity account pool with per-model cooldown (`/pool`) |
 | `extensions/rewind/` | `~/.pi/agent/extensions/rewind/` | Multi-file extension: trim old tool results from the model context (`/rewind`) |
 | `scripts/get-secret.sh` | `~/.pi/agent/scripts/` | Reads one key: exported variable first, then `~/.env`; mode `700` |
-| `agents/*.md` | `~/.pi/agent/agents/` | Subagent profiles (agent frontmatter + prompt) |
 | `config/settings.json` | `~/.pi/agent/settings.json` | Installed only if absent — otherwise diffed |
 | `config/models.json` | `~/.pi/agent/models.json` | Provider/model overrides; no literal keys — credentials come from `auth.json` or `!get-secret.sh` |
 | `config/web-search.example.json` | `~/.pi/agent/web-search.json` | Same rule; **this is an example, edit it** |
@@ -44,55 +43,37 @@ to you. Pass `--force` to overwrite anyway (a backup is still taken).
 
 ## Worker agents
 
-`pi-subagents` ships a `worker` profile whose tool list is a strict allowlist:
-`read, grep, find, ls, bash, edit, write, contact_supervisor`. That is deliberate — a writer
-child should not wander — but it also makes the bundled worker blind to this setup's code
-intelligence: no `lens_diagnostics`, no `memory_search`, and `inheritSkills: false` so it cannot
-see the installed skills either.
+No custom agent profile is shipped. `pi-subagents`' own `worker` is used as-is, with its
+strict allowlist (`read, grep, find, ls, bash, edit, write, contact_supervisor`).
 
-`agents/worker-lsp.md` closes that gap without handing the worker the whole toolbox:
+`agents/worker-lsp.md` used to extend it with `pi-lens` code intelligence
+(`lens_diagnostics`, `symbol_search`, `module_report`, `read_symbol`, `lsp_navigation`,
+`ast_grep_*`) plus read-only memory. It was deleted on 2026-10-26 together with
+`pi-lens`, so the folder is gone; `install.sh` still creates `~/.pi/agent/agents/` and
+syncs any `agents/*.md` you add back, and any profile there overrides the bundled one
+of the same name.
 
-| Field | Value | Why |
-| :--- | :--- | :--- |
-| `tools` | worker's allowlist + `lens_diagnostics`, `symbol_search`, `module_report`, `read_symbol`, `read_enclosing`, `lsp_navigation`, `ast_grep_search`, `ast_grep_outline`, `pi_lens_activate_tools`, `memory_search`, `memory_read`, `scratchpad` | code intel plus read-only memory (no `memory_write` — a child does not edit long-term memory; no `ast_grep_replace` — writes go through `edit`) |
-| `extensions` | `~/.pi/agent/npm/node_modules/pi-lens/dist/index.js`, `.../pi-memory/index.ts` | foreground children never load ambient extensions, so an allowlisted name alone does **not** load its provider; the paths must be listed |
-| `inheritSkills` | `true` | the worker can follow this repo's own skills (`work`, `check`, `hunt`, …) |
-| `timeoutMs` | `1500000` (25 min) | per-run cost and latency ceiling |
-| `acceptance` | `checked` | the run must pass an acceptance gate, not just claim success |
-
-Launch it like any other agent; keep `worktree: true` for write isolation:
-
-```js
-subagent({ agent: "worker-lsp", task: "…", worktree: true })
-```
-
-Verified 2026-10-23 with a read-only probe child on `pi-lens`: `lens_diagnostics` registered and
-reported 80 files / 899 diagnostics, and `memory_search` returned real output. Without the
-explicit `extensions` line, the same launch reports the tools as missing.
-
-Deliberately **not** configured: no sandbox. Children run with an unrestricted `bash` in the
-parent environment. Use `worktree: true` for isolation of writes; if you later want
-bwrap/container execution, add a `launcher` frontmatter entry (see pi-subagents
-`docs/agents.md`).
+Children still run with an unrestricted `bash` in the parent environment — use
+`worktree: true` for write isolation.
 
 ## Machine → repo sync
 
-The shared config was last synced from the current machine on 2026-10-22 (Pi 1.4.0).
-`config/settings.json` is byte-identical to the live file — including the missing trailing
-newline, because `install.sh` compares the two with `cmp` and Pi writes the live file
-without one — and `config/models.json` matches too. Plugins and
-packages uninstalled on the machine have been removed from the repository
-(`pi-devin-local`, `agent-stuff`, `pi-advisor-flow`, `pi-smart-fetch`,
+The shared config was last synced from the current machine on 2026-10-26 (Pi 1.4.0).
+`config/settings.json` mirrors the live package selection (`install.sh` compares the two
+with `cmp`, and Pi writes the live file without a trailing newline), and
+`config/models.json` matches too. Plugins and packages uninstalled on the machine have
+been removed from the repository (`pi-devin-local`, `agent-stuff`, `pi-advisor-flow`, `pi-smart-fetch`,
 `pi-permission-system`, `pi-extension`, `pi-xai-oauth`), along with uninstalled extension
 scripts/configs (`decision-compact.ts`, Devin client patch, `advisor.json`). Newly
 installed packages on the machine (`@narumitw/pi-goal`, `pi-subagents@0.81.0`) are synced
 into the template. `pi-pigment` was added to the template on 2026-10-21 and reverted on
 2026-10-22: it was never installed on the machine, so the template only carried drift.
-`pi-lens` was dropped on 2026-10-22 as too heavy, then re-adopted on 2026-10-23 once
-`pi-lsp-extension` and `context-mode` were removed: it replaces both, so the tool count
-went down. `@heyhuynhgiabuu/pi-pretty`
-was installed the same day by choice and is synced here too, then vendored into
-`extensions/pi-pretty/` on 2026-10-23 so its renderer could be changed.
+`pi-lens` was dropped on 2026-10-22 as too heavy, re-adopted on 2026-10-23 once
+`pi-lsp-extension` and `context-mode` were removed, and dropped again on 2026-10-26:
+its five always-on tools plus the on-demand activation path cost more than plain
+`grep`/`read` returned. `@heyhuynhgiabuu/pi-pretty` was installed the same day by
+choice and is synced here too, then vendored into `extensions/pi-pretty/` on 2026-10-23
+so its renderer could be changed.
 
 **Default model is `hive/deepseek-ai/deepseek-v4.1-flash-1017`** with high thinking, in
 both the template and on the machine.
@@ -405,8 +386,7 @@ After installing, run `/reload` in Pi to check both components visually.
 
 `config/settings.json` lists the packages this setup keeps. Eight were measured
 against 158 sessions of real tool usage; `@heyhuynhgiabuu/pi-pretty` was added by
-choice on 2026-10-22 and `pi-lens` replaced both `pi-lsp-extension` and
-`context-mode` on 2026-10-23:
+choice on 2026-10-22:
 
 | Package | Why it stays |
 | :--- | :--- |
@@ -417,7 +397,6 @@ choice on 2026-10-22 and `pi-lens` replaced both `pi-lsp-extension` and
 | `pi-memory` | six `memory_*` tools plus `scratchpad` |
 | `pi-subagents@0.81.0` | `subagent`, `bg_wait`, FleetView |
 | `@narumitw/pi-goal` | `goal_*` tools and `/goal` |
-| `pi-lens@4.4.4` | `lens_diagnostics`, `symbol_search`, `module_report`, `read_symbol`, `read_enclosing`, `lsp_navigation`, `ast_grep_*` — one code-intelligence layer instead of `pi-lsp-extension` + a second LSP pool |
 | `@heyhuynhgiabuu/pi-pretty` | message and tool rendering (see below); re-registers `read`/`edit`, owns no header or footer |
 
 Dropped, and why they should not come back without a measurement:
@@ -427,24 +406,20 @@ Dropped, and why they should not come back without a measurement:
 - **`@latentminds/pi-quotas`, `pi-context-view`, `pi-session-recap`, `pi-simplify`,
   `pi-cache-optimizer`, `pi-diff-review`** — commands and UI only, zero measured use;
   quota and context state already show in the footer and `/antigravity.usage`.
-- **`pi-lsp-extension` + `context-mode`** — dropped on 2026-10-23 in favour of `pi-lens`.
-  `pi-lens` covers the LSP diagnostics that `pi-lsp-extension` carried (plus symbol search and the
-  ast-grep tools) without a second client pool, and `context-mode`'s output sandboxing overlapped
-  `/rewind` and `pi-memory` while adding nine `ctx_*` tools to every request.
-- **`pi-lens`** — briefly dropped on 2026-10-22 for being heavy, then re-adopted on 2026-10-23
-  once `pi-lsp-extension` and `context-mode` left: it now replaces both, so the total tool count
-  went down, not up. The heaviness was duplication, not the package.
+- **`pi-lsp-extension` + `context-mode`** — dropped on 2026-10-23, briefly replaced by `pi-lens`.
+  `pi-lens` carried the LSP diagnostics `pi-lsp-extension` had plus symbol search and ast-grep,
+  without a second client pool; `context-mode`'s output sandboxing overlapped `/rewind` and
+  `pi-memory` while adding nine `ctx_*` tools to every request.
+- **`pi-lens`** — dropped again on 2026-10-26. It was adopted on 2026-10-23 only because it
+  replaced two other packages, not because its tools were used: five of its eight tools were
+  always in the schema, the other three needed `pi_lens_activate_tools` first, and the LSP
+  servers were installed separately anyway. `grep` + `read` + the shell do the same job for
+  this workflow. Its Java LSP scripts (`~/.pi/agent/scripts/install-java-lsp.sh`, `jdtls`,
+  `google-java-format`) are now dead weight and safe to delete.
 
-`pi-lens` exposes eight agent tools, five of them always active; `lsp_navigation` and the
-`ast_grep_*` tools load on demand through `pi_lens_activate_tools`, so the schema cost is paid
-only when a task needs them. LSP servers are installed separately
-(`typescript-language-server` plus `typescript` for JS/TS); without one, `lens_diagnostics`
-falls back to tree-sitter and ast-grep rules, which is not type checking.
-
-One trial was retired, and its overlap resolved the other way: `context-mode` rewrote tool output
-and context, duplicating `/rewind` and `pi-memory`, so it was replaced by `pi-lens` for code
-intelligence instead of being kept alongside both. `pi-lens` had already lost the duplication bet
-against `pi-lsp-extension` on 2026-10-22; removing its competitor made it the winner.
+One trial was retired the other way: `context-mode` rewrote tool output and context,
+duplicating `/rewind` and `pi-memory`, so it went in favour of `pi-lens` for code intelligence.
+When `pi-lens` itself left, nothing replaced it — plain tools cover the gap.
 
 Restart Pi or run `/reload` after changing the package selection.
 
