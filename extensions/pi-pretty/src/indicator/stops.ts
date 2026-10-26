@@ -7,21 +7,17 @@
  * stops interpolated per cell, so neighbours differ by a few RGB units instead of
  * a whole tier.
  *
+ * The stop list is configuration, not a built-in: `workingIndicator.stops` in
+ * `pi-pretty.json` carries it, and its absence means "keep the three tiers". A
+ * default baked in here would silently override `sessionAccent` for every config
+ * that predates the key.
+ *
  * Colours go through pi-tui's own colour maths (parseColor/mixColors/colorToRgb),
  * which is what the custom banner uses, so the banner and these labels share one
  * colour pipeline.
  */
 
 import { type Color, colorToRgb, mixColors, parseColor } from "@earendil-works/pi-tui";
-
-/** Default band, matching the setup's custom-banner palette. */
-export const DEFAULT_STOPS: readonly string[] = [
-	"#22d3ee", // cyan
-	"#60a5fa", // blue
-	"#a78bfa", // violet
-	"#f472b6", // pink
-	"#fb923c", // orange
-];
 
 /** `#rrggbb` only: a gradient stop must be a concrete colour, not a theme token. */
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;

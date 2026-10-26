@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildWorkingFrames } from "../src/indicator/frames.js";
-import { DEFAULT_STOPS, gradientAnsiAt, normalizeStops, resetGradientStopsForTests } from "../src/indicator/stops.js";
+import { resolveWorkingIndicatorSettings } from "../src/indicator/settings.js";
+import { gradientAnsiAt, normalizeStops, resetGradientStopsForTests } from "../src/indicator/stops.js";
 
 /**
  * Multi-stop gradient for the shimmer band.
@@ -10,6 +11,10 @@ import { DEFAULT_STOPS, gradientAnsiAt, normalizeStops, resetGradientStopsForTes
  * three distinct colours across one sweep, and that everything upstream did is
  * unchanged when no stops are configured.
  */
+
+/** The setup's band. It lives in `config/pi-pretty.json`, not in the source, so
+ *  tests carry their own copy rather than importing a default that does not exist. */
+const BANNER_STOPS = ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"];
 
 const ANSI = {
 	low: "\x1b[38;2;40;40;40m",
@@ -48,23 +53,23 @@ describe("normalizeStops", () => {
 describe("gradientAnsiAt", () => {
 	it("returns each end stop exactly at 0 and 1", () => {
 		resetGradientStopsForTests();
-		expect(gradientAnsiAt(DEFAULT_STOPS, 0)).toBe("\x1b[38;2;34;211;238m"); // #22d3ee
-		expect(gradientAnsiAt(DEFAULT_STOPS, 1)).toBe("\x1b[38;2;251;146;60m"); // #fb923c
+		expect(gradientAnsiAt(BANNER_STOPS, 0)).toBe("\x1b[38;2;34;211;238m"); // #22d3ee
+		expect(gradientAnsiAt(BANNER_STOPS, 1)).toBe("\x1b[38;2;251;146;60m"); // #fb923c
 	});
 
 	it("interpolates between stops instead of snapping", () => {
 		resetGradientStopsForTests();
 		const seen = new Set<string>();
-		for (let i = 0; i <= 100; i++) seen.add(gradientAnsiAt(DEFAULT_STOPS, i / 100));
+		for (let i = 0; i <= 100; i++) seen.add(gradientAnsiAt(BANNER_STOPS, i / 100));
 		// 5 stops sampled 101 ways: far more than 5 distinct values.
 		expect(seen.size).toBeGreaterThan(50);
 	});
 
 	it("clamps out-of-range and non-finite input", () => {
 		resetGradientStopsForTests();
-		expect(gradientAnsiAt(DEFAULT_STOPS, -5)).toBe(gradientAnsiAt(DEFAULT_STOPS, 0));
-		expect(gradientAnsiAt(DEFAULT_STOPS, 5)).toBe(gradientAnsiAt(DEFAULT_STOPS, 1));
-		expect(gradientAnsiAt(DEFAULT_STOPS, Number.NaN)).toBe(gradientAnsiAt(DEFAULT_STOPS, 0));
+		expect(gradientAnsiAt(BANNER_STOPS, -5)).toBe(gradientAnsiAt(BANNER_STOPS, 0));
+		expect(gradientAnsiAt(BANNER_STOPS, 5)).toBe(gradientAnsiAt(BANNER_STOPS, 1));
+		expect(gradientAnsiAt(BANNER_STOPS, Number.NaN)).toBe(gradientAnsiAt(BANNER_STOPS, 0));
 	});
 
 	it("returns empty for fewer than two stops", () => {
@@ -79,7 +84,7 @@ describe("buildWorkingFrames with stops", () => {
 		const { frames } = buildWorkingFrames(["Working…"], {
 			mode: "shimmer",
 			ansi: ANSI,
-			stops: [...DEFAULT_STOPS],
+			stops: [...BANNER_STOPS],
 			spinner: false,
 		});
 		const colors = distinctColors(frames);
@@ -93,7 +98,7 @@ describe("buildWorkingFrames with stops", () => {
 		const { frames } = buildWorkingFrames(["abcdefghij"], {
 			mode: "shimmer",
 			ansi: ANSI,
-			stops: [...DEFAULT_STOPS],
+			stops: [...BANNER_STOPS],
 			spinner: false,
 		});
 		for (const color of distinctColors(frames)) {
@@ -111,7 +116,7 @@ describe("buildWorkingFrames with stops", () => {
 		const { frames } = buildWorkingFrames(["abc"], {
 			mode: "shimmer",
 			ansi: ANSI,
-			stops: [...DEFAULT_STOPS],
+			stops: [...BANNER_STOPS],
 			spinner: false,
 		});
 		// The first frame has the band fully left of the text: all resting colour.
@@ -140,5 +145,43 @@ describe("buildWorkingFrames with stops", () => {
 		const without = buildWorkingFrames(["Working…"], base);
 		const withOne = buildWorkingFrames(["Working…"], { ...base, stops: ["#22d3ee"] });
 		expect(withOne.frames).toEqual(without.frames);
+	});
+});
+
+/**
+ * `stops` in the settings resolver. Absent (or unusable) means "no gradient": the
+ * three tiers stay, which is what keeps `sessionAccent` meaningful. That is
+ * deliberate — see the byte-identical-upstream test above.
+ */
+describe("resolveWorkingIndicatorSettings stops", () => {
+	it("leaves stops undefined when the key is absent, so the three tiers stay", () => {
+		const settings = resolveWorkingIndicatorSettings({ mode: "shimmer", text: "Working…" }, {});
+		expect(settings.stops).toBeUndefined();
+	});
+
+	it("keeps a configured list verbatim", () => {
+		const settings = resolveWorkingIndicatorSettings(
+			{ mode: "shimmer", text: "Working…", stops: ["#22d3ee", "#fb923c"] },
+			{},
+		);
+		expect(settings.stops).toEqual(["#22d3ee", "#fb923c"]);
+	});
+
+	it("treats an explicit empty list as opting out of the gradient", () => {
+		const settings = resolveWorkingIndicatorSettings({ mode: "shimmer", text: "Working…", stops: [] }, {});
+		expect(settings.stops).toBeUndefined();
+	});
+
+	it("treats a single stop as opting out, not as a one-colour gradient", () => {
+		const settings = resolveWorkingIndicatorSettings({ mode: "shimmer", text: "Working…", stops: ["#22d3ee"] }, {});
+		expect(settings.stops).toBeUndefined();
+	});
+
+	it("drops invalid entries but keeps a usable pair", () => {
+		const settings = resolveWorkingIndicatorSettings(
+			{ mode: "shimmer", text: "Working…", stops: ["#22d3ee", "accent", "#fb923c"] },
+			{},
+		);
+		expect(settings.stops).toEqual(["#22d3ee", "#fb923c"]);
 	});
 });
