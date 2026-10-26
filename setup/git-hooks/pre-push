@@ -1,22 +1,56 @@
 #!/bin/sh
-# Refuse direct pushes to the protected branch. Work goes through a branch + PR.
+# Guard the branch that other clones track, without banning direct pushes.
+#
+# Policy (owner, 2026-10-23): a PR *or* a direct push to main are both fine. What
+# is never fine is rewriting main's history or deleting it, because every other
+# clone and the remote's reflog point at commits that would stop existing.
 #
 # Installed by setup/install-git-hooks.sh, because hooks live in .git/hooks/ and
 # are not tracked: a clone has none until it runs that script.
+#
+# Exit codes: 0 = allow, 1 = refuse.
 protected="refs/heads/main"
 
-while read -r _local_ref _local_sha remote_ref _remote_sha; do
-	case "$remote_ref" in
-		"$protected")
-			echo "pre-push: blocked direct push to $protected" >&2
-			echo "  work through a branch + PR:" >&2
-			echo "    git switch -c feat/<name>" >&2
-			echo "    git commit ..." >&2
-			echo "    git push -u origin feat/<name>" >&2
-			echo "    gh pr create --fill" >&2
-			exit 1
-			;;
+zeros() {
+	case "$1" in
+		*[!0]*) return 1 ;;
+		"") return 1 ;;
+		*) return 0 ;;
 	esac
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	[ "$remote_ref" = "$protected" ] || continue
+
+	if zeros "$local_sha"; then
+		echo "pre-push: refusing to delete $remote_ref" >&2
+		echo "  Deleting main strands every other clone. Push a revert commit instead." >&2
+		exit 1
+	fi
+
+	# No remote tip yet (first push) or a brand-new local branch: nothing to erase.
+	if zeros "$remote_sha"; then
+		continue
+	fi
+
+	# A fast-forward only ever appends. Anything else is a rewrite of published
+	# history unless the remote tip is already an ancestor of what we send.
+	if git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+		continue
+	fi
+
+	echo "pre-push: blocked a non-fast-forward push to $remote_ref" >&2
+	echo "  local  $local_ref  $local_sha" >&2
+	echo "  remote $remote_ref $remote_sha" >&2
+	echo "" >&2
+	echo "  This rewrites published history: commits on the remote would be dropped." >&2
+	echo "  Usually one of these is what you want:" >&2
+	echo "    git pull --rebase     # replay your commits on top of the remote tip" >&2
+	echo "    git merge origin/main # or merge it, keeping both histories" >&2
+	echo "" >&2
+	echo "  If the rewrite is genuinely intended:" >&2
+	echo "    git push --force-with-lease --no-verify origin HEAD" >&2
+	exit 1
 done
 
 exit 0

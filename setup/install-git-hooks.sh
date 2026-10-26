@@ -39,5 +39,6 @@ for src in "$SRC_DIR"/*; do
   printf '  installed: %s\n' "$name"
 done
 
-printf '\nHooks installed. Direct pushes to main are now refused.\n'
-printf 'Workflow: git switch -c feat/<name> && git push -u origin feat/<name> && gh pr create --fill\n'
+printf '\nHooks installed.\n'
+printf 'Policy: a PR or a direct push to main are both fine.\n'
+printf 'The pre-push hook only refuses to rewrite or delete main.\n'
