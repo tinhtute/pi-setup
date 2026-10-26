@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `workingIndicator.stops` (2+ `#rrggbb`) paints the shimmer band as a continuous multi-stop
+gradient instead of quantising each cell into `low`/`mid`/`high`. Colour maths go through
+pi-tui's `parseColor`/`mixColors`/`colorToRgb`, so the band and a host banner can share one
+palette. `low` remains the resting colour; a configured list takes precedence over
+`sessionAccent`, and an absent list leaves upstream's three tiers byte-identical.
+
+### Fixed
+
+- Host status labels (`Compacting context…`, `Retrying…`, `Summarizing branch…`) are cached per
+label, so a `/theme` swap or a re-install with new settings kept serving the frames painted for
+the previous palette. The cache key now covers the mode, stops, weight, interval and resolved
+tier colours.
+
 ## [0.8.0] - 2026-10-22
 
 ### Added

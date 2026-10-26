@@ -689,14 +689,29 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
   "toolStyle": "claudecode",
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
-    "low": "#4d788e", "mid": "#60a5fa", "high": "#22d3ee",
+    "low": "#4d788e",
+    "stops": ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
     "bold": true, "sessionAccent": false, "intervalMs": 33
   },
   "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
 }
 ```
 
-Three tiers, not five: pi-pretty sweeps `low → mid → high` across the text and paints the
-spinner in `low`, so a deep `#124b68` cannot be used there without making the glyph
-invisible. Setting `mid`/`high` also switches `tiersCustomized` on, which stops the
-per-session accent from overriding the palette.
+Five stops, not three tiers. pi-pretty quantises a cell into `low`/`mid`/`high` by default, which
+makes a wide band read as three flat blocks with visible steps where the tiers meet. With `stops`
+the same intensity curve is interpolated per cell, so neighbours differ by a few RGB units. The
+five colours are the banner's own palette (`extensions/custom-banner.ts`), so the header and the
+working row animate the same band:
+
+```text
+#22d3ee → #60a5fa → #a78bfa → #f472b6 → #fb923c
+ cyan      blue      violet     pink      orange
+```
+
+`low` is still the resting colour — the band is off the text for 12 of 28 frames, so painting the
+whole range all the time would leave most cells bright and lose the contrast against the prompt
+border. That is also why `mid`/`high` are absent from the config: the gradient painter never reads
+them (`src/indicator/frames.ts`), and leaving them in implies they still do something. `stops`
+also takes precedence over `sessionAccent`, which is pinned off here for the same reason.
+
+Drop `stops` (or set `[]`) to go back to the three tiers; `mid`/`high` only matter on that path.

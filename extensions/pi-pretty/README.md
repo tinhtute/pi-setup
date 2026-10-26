@@ -183,6 +183,7 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 | `workingIndicator.low` | theme color name or `#hex` | — | `dim` |
 | `workingIndicator.mid` | theme color name or `#hex` | — | `muted` |
 | `workingIndicator.high` | theme color name or `#hex` | — | `accent` |
+| `workingIndicator.stops` | array of 2+ `#rrggbb` stops; each cell is interpolated through the band instead of snapping to `low`/`mid`/`high`. `low` stays the resting colour, and a configured list takes precedence over `sessionAccent`. Absent, empty, or single-stop falls back to the three tiers | — | unset (three tiers) |
 | `workingIndicator.bold` | boolean | — | `true` |
 | `workingIndicator.hint` | boolean | — | deprecated (ignored) |
 | `workingIndicator.sessionAccent` | boolean | — | `true` |
@@ -211,6 +212,13 @@ indicator. TUI sessions only; theme changes take effect on the next session.
 
 `text` accepts a single phrase or an array — the sweep plays each phrase in order, one full band
 sweep per phrase (e.g. `["Working…", "Thinking…", "Pondering…"]`). The env var splits on commas.
+
+`stops` turns the same sweep into a continuous multi-stop gradient. Upstream quantises every cell
+into one of three tiers, so a wide band reads as three flat blocks with visible steps at the tier
+boundaries; with `stops` each neighbouring pair differs by a few RGB units instead. `low` is still
+the resting colour, so the text does not glare while the band is off-screen. A configured list
+wins over `sessionAccent`, and an absent/empty/single-stop list leaves the three tiers exactly as
+they were.
 
 When `sessionAccent` is on, the mid/high tiers and the spinner are tinted with a stable per-session
 accent color derived from the session name (an OKLCH port of
