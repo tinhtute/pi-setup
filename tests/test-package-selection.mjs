@@ -13,14 +13,13 @@ const sources = settings.packages.map((entry) => typeof entry === "string" ? ent
 const packageIds = sources.map((source) => source.startsWith("npm:")
 	? source.replace(/@[^@/]+$/, "") : source);
 assert.equal(new Set(packageIds).size, packageIds.length, "package identities must not be duplicated");
-// The minimal set: one provider, one web layer, one tool each for todo/ask/memory/lsp,
+// The minimal set: one provider, one web layer, one tool each for todo/ask,
 // one delegation layer, one goal layer. Anything else has to earn its tool schema.
 const expected = [
 	"npm:pi-antigravity",
 	"npm:pi-web-access",
 	"npm:@juicesharp/rpiv-ask-user-question",
 	"npm:@juicesharp/rpiv-todo",
-	"npm:pi-memory",
 	"npm:pi-subagents@0.81.0",
 	"npm:@narumitw/pi-goal",
 	// Vendored 2026-10-23: pi-pretty was forked into extensions/pi-pretty so its
@@ -44,15 +43,20 @@ for (const dropped of [
 	"npm:pi-simplify",
 	"npm:pi-diff-review@0.1.27",
 	"npm:pi-condense",
-	// pi-lsp-extension and context-mode were both dropped on 2026-10-23. pi-lens now
-	// owns code intelligence (lens_diagnostics, symbol_search, ast_grep_*) and pi-memory
-	// already owns memory, so neither had a job left.
+	// pi-lsp-extension and context-mode were both dropped on 2026-10-23; pi-lens then
+	// owned code intelligence and pi-memory owned memory, so neither had a job left.
+	// Both successors are gone too (see below), which is the point of keeping this list.
 	"npm:pi-lsp-extension",
 	"npm:context-mode",
 	// pi-lens replaced both on 2026-10-23 and was itself dropped on 2026-10-26: it
 	// never earned its schema cost (five always-on tools plus an on-demand
 	// activation path), so code intelligence is back to plain grep/read.
 	"npm:pi-lens",
+	// pi-memory was dropped on 2026-10-26 together with qmd and its whole
+	// ~/.pi/agent/memory tree. Six memory_* tools plus scratchpad for a store that
+	// was inert under the default PI_MEMORY_SNAPSHOT=stable: MEMORY.md was injected
+	// as plain context either way, and search only ran when called by hand.
+	"npm:pi-memory",
 	// pi-pigment (render-only decorators for the eight built-in tool renderers) was
 	// added to the template on 2026-10-21 and reverted on 2026-10-22. It hooks the
 	// same internal renderer surface that retired code-block.ts, and it was never

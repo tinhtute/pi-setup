@@ -394,7 +394,6 @@ choice on 2026-10-22:
 | `pi-web-access` | `web_search`, `fetch_content`, `source_check` |
 | `@juicesharp/rpiv-todo` | the `todo` tool (738 calls) |
 | `@juicesharp/rpiv-ask-user-question` | `ask_user_question` (36 calls) |
-| `pi-memory` | six `memory_*` tools plus `scratchpad` |
 | `pi-subagents@0.81.0` | `subagent`, `bg_wait`, FleetView |
 | `@narumitw/pi-goal` | `goal_*` tools and `/goal` |
 | `@heyhuynhgiabuu/pi-pretty` | message and tool rendering (see below); re-registers `read`/`edit`, owns no header or footer |
@@ -408,18 +407,27 @@ Dropped, and why they should not come back without a measurement:
   quota and context state already show in the footer and `/antigravity.usage`.
 - **`pi-lsp-extension` + `context-mode`** — dropped on 2026-10-23, briefly replaced by `pi-lens`.
   `pi-lens` carried the LSP diagnostics `pi-lsp-extension` had plus symbol search and ast-grep,
-  without a second client pool; `context-mode`'s output sandboxing overlapped `/rewind` and
-  `pi-memory` while adding nine `ctx_*` tools to every request.
+  without a second client pool; `context-mode`'s output sandboxing overlapped `/rewind`
+  while adding nine `ctx_*` tools to every request.
 - **`pi-lens`** — dropped again on 2026-10-26. It was adopted on 2026-10-23 only because it
   replaced two other packages, not because its tools were used: five of its eight tools were
   always in the schema, the other three needed `pi_lens_activate_tools` first, and the LSP
   servers were installed separately anyway. `grep` + `read` + the shell do the same job for
   this workflow. Its Java LSP scripts (`~/.pi/agent/scripts/install-java-lsp.sh`, `jdtls`,
   `google-java-format`) are now dead weight and safe to delete.
+- **`pi-memory` (+ `qmd`)** — dropped on 2026-10-26. Under the default
+  `PI_MEMORY_SNAPSHOT=stable` it never called qmd per turn: `MEMORY.md`, today's daily log and
+  the scratchpad were read straight into the prompt, so the six `memory_*` tools were schema
+  cost for a store that only changed when written to explicitly. Search only ran when asked
+  for, and then cost 9-57 s and 1.7 GB because qmd loads three GGUF models per invocation
+  (embedding 318 MB, HyDE expansion 1.2 GB, reranker 610 MB). The notes themselves stay
+  readable as plain markdown; `read` + `grep` cover the same job. Tuning the HyDE model down
+  was tried and reverted — `Qwen3-0.6B` cannot emit HyDE text at all, so semantic search
+  silently degraded to one vector query and missed unaccented Vietnamese queries entirely.
 
-One trial was retired the other way: `context-mode` rewrote tool output and context,
-duplicating `/rewind` and `pi-memory`, so it went in favour of `pi-lens` for code intelligence.
-When `pi-lens` itself left, nothing replaced it — plain tools cover the gap.
+One trial was retired the other way: `context-mode` rewrote tool output and context, which
+`/rewind` already covered, so it went in favour of `pi-lens` for code intelligence. When
+`pi-lens` itself left, nothing replaced it — plain tools cover the gap.
 
 Restart Pi or run `/reload` after changing the package selection.
 
