@@ -7,7 +7,7 @@ extensions, the secret helper, and the config files, then tells you the few
 things only a human can do (API keys, provider logins).
 
 ```bash
-git clone https://github.com/therealtinhtute/pi-setup.git
+git clone https://github.com/tinhtute/pi-setup.git
 cd pi-setup
 bash setup/install.sh
 ```
