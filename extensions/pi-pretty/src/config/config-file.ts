@@ -17,10 +17,11 @@ export interface WorkingIndicatorConfig {
 	low?: string;
 	mid?: string;
 	high?: string;
-	/** Multi-stop gradient as `#rrggbb` colours (2 or more). When set, the sweep is
-	 * interpolated per cell instead of snapping to the three tiers, and `low` stays
-	 * as the resting colour. */
-	stops?: string[];
+	/** Multi-stop gradient as `#rrggbb` colours (2 or more), or `"theme"` to derive the
+	 * ramp from the active theme's accent. When set, the sweep is interpolated per
+	 * cell instead of snapping to the three tiers, and `low` stays as the resting
+	 * colour. */
+	stops?: string[] | "theme";
 	bold?: boolean;
 	/** @deprecated Retained for config compatibility; the working row no longer renders this hint. */
 	hint?: boolean;
@@ -142,7 +143,9 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 				const value = src[tier];
 				if (typeof value === "string" && value.trim() !== "") wi[tier] = value;
 			}
-			if (Array.isArray(src.stops)) {
+			if (src.stops === "theme") {
+				wi.stops = "theme";
+			} else if (Array.isArray(src.stops)) {
 				const stops = src.stops.filter((item): item is string => typeof item === "string" && item.trim() !== "");
 				if (stops.length > 0) wi.stops = stops;
 			}

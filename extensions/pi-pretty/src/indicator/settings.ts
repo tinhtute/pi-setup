@@ -7,6 +7,7 @@
 import type { WorkingIndicatorConfig } from "../config.js";
 import { envFlag } from "./env.js";
 import { normalizeStops } from "./stops.js";
+import type { WorkingStops } from "./stops.js";
 import type { WorkingIndicatorMode } from "./types.js";
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -24,8 +25,9 @@ export interface WorkingIndicatorSettings {
 	texts: string[];
 	mode: WorkingIndicatorMode;
 	palette: WorkingIndicatorPalette;
-	/** Multi-stop gradient (`#rrggbb`, 2+). Absent means tiered colouring. */
-	stops?: string[];
+	/** Multi-stop gradient: an explicit `#rrggbb` list (2+), or `"theme"` for a ramp
+	 * derived from the active theme's accent. Absent means tiered colouring. */
+	stops?: WorkingStops;
 	bold: boolean;
 	/** @deprecated Retained for config compatibility; no interrupt hint is rendered. */
 	hint: boolean;
