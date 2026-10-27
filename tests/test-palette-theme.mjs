@@ -1,15 +1,17 @@
 // Run from the repo root: node tests/test-palette-theme.mjs
 // Headless check of which colours follow the theme and which are fixed on purpose:
 //
-//   * the banner keeps its own rainbow (a signature, not a status surface),
-//   * the working row's band keeps the same rainbow (owner decision: the band looks
-//     like the banner), and
-//   * the band's resting colour — the quiet cells and the spinner glyph — is the theme
-//     token `dim`, which is the part that used to be the cyan theme's `#4d788e`.
+//   * the banner keeps its own rainbow — the header is a signature, not a status
+//     surface, so its five colours never come from the theme;
+//   * every gradient surface that reflects state — the working row, the loader
+//     labels, the hidden-thinking row — takes `stops: "theme"`, a five-step ramp
+//     around the active theme's accent, so `/theme` repaints them;
+//   * the band's resting colour is the theme token `dim`, which is the part that
+//     used to be the cyan theme's `#4d788e`.
 //
 // The extensions are TypeScript and cannot be imported here, so this pins the
-// behaviour-carrying lines and mirrors the optional `stops: "theme"` ramp against the
-// real pi-tui helpers — same approach as tests/test-pretty-border.mjs.
+// behaviour-carrying lines and mirrors the ramp against the real pi-tui helpers —
+// same approach as tests/test-pretty-border.mjs.
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -24,7 +26,7 @@ const readJson = (rel) => JSON.parse(read(rel));
 const RAINBOW = ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"];
 
 // ---------------------------------------------------------------------------
-// 1. Shipped configs: rainbow band, theme-token resting colour.
+// 1. Shipped configs: theme-derived band, theme-token resting colour.
 // ---------------------------------------------------------------------------
 for (const [label, configPath] of [
 	["repo", "config/pi-pretty.json"],
@@ -33,7 +35,11 @@ for (const [label, configPath] of [
 	if (label === "live" && !existsSync(configPath)) continue;
 	const config = JSON.parse(readFileSync(configPath, "utf8"));
 	assert.equal(config.workingIndicator.low, "dim", `${label}: low must be the theme token dim`);
-	assert.deepEqual(config.workingIndicator.stops, RAINBOW, `${label}: the band stays the banner's rainbow`);
+	assert.equal(
+		config.workingIndicator.stops,
+		"theme",
+		`${label}: the band must follow the theme accent, not a fixed hex list`,
+	);
 }
 
 // The default theme is the generated one, so nothing pins cyan for a fresh install.
@@ -56,12 +62,17 @@ const palette = read("extensions/pi-pretty/src/indicator/palette.ts");
 assert.match(palette, /const hex = hexToAnsiFg\(value\);/, "an explicit hex still wins for low/mid/high");
 assert.match(read("extensions/pi-pretty/src/indicator/settings.ts"), /palette: \{ low: "dim", mid: "muted", high: "accent" \}/);
 
-// The theme-derived ramp still exists as an opt-in (`stops: "theme"`), and every
-// consumer must resolve it — a raw sentinel would reach the interpolator as a string.
+// The theme-derived ramp is what ships, and every consumer must resolve it — a raw
+// sentinel would reach the interpolator as a string.
 const stopsSrc = read("extensions/pi-pretty/src/indicator/stops.ts");
 const resolverSrc = read("extensions/pi-pretty/src/indicator/theme-stops.ts");
 assert.match(stopsSrc, /export const THEME_STOPS = "theme";/);
 assert.match(resolverSrc, /export const RAMP_STEPS: readonly number\[\] = \[-0\.42, -0\.2, 0, 0\.22, 0\.45\];/);
+assert.match(
+	resolverSrc,
+	/colors\?\.accent \? accentRampHexes\(colors\.accent\)/,
+	"the band derives from the theme accent, which is the theme's primary colour",
+);
 for (const consumer of ["install.ts", "thinking-label.ts", "gradient.ts"]) {
 	const src = read(`extensions/pi-pretty/src/indicator/${consumer}`);
 	assert.match(src, /resolveStops\(/, `${consumer} must resolve the stops`);
@@ -133,8 +144,17 @@ if (tuiPath) {
 // ---------------------------------------------------------------------------
 const readme = read("README.md");
 assert.match(readme, /"low": "dim"/, "README documents the token resting colour");
-assert.match(readme, /"stops": \["#22d3ee"/, "README documents the shipped rainbow band");
-assert.match(readme, /"stops": "theme"/, "README documents the theme-following opt-in");
-assert.match(read("extensions/pi-pretty/pi-pretty.example.json"), /"stops": \["#22d3ee"/, "the example config ships the rainbow");
+assert.match(readme, /"stops": "theme"/, "README documents the theme-derived band");
+assert.match(readme, /#22d3ee/, "README still documents the banner's own rainbow");
+assert.match(
+	read("extensions/pi-pretty/pi-pretty.example.json"),
+	/"stops": "theme"/,
+	"the example config ships the theme-derived band",
+);
+assert.match(
+	read("extensions/pi-pretty/README.md"),
+	/`"theme"`/,
+	"the pi-pretty README documents the sentinel",
+);
 
-console.log("ok: banner and band keep the rainbow, the resting colour follows the theme");
+console.log("ok: the banner keeps its rainbow, everything else follows the theme accent");

@@ -29,7 +29,7 @@
 		"low": "dim",
 		"mid": "muted",
 		"high": "accent",
-		"stops": ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
+		"stops": "theme",
 		"bold": true,
 		"sessionAccent": true,
 		"intervalMs": 33
