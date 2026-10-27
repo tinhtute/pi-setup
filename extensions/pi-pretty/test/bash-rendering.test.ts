@@ -88,7 +88,7 @@ function loadBashTool() {
 /** Register the bash tool with a mock SDK definition and return the registered tool. */
 function registerBashToolWith(sdkTool: SdkToolDef) {
 	const registerTool = vi.fn();
-	registerBashTool({ registerTool } as any, process.cwd(), undefined, sdkTool, MockText);
+	registerBashTool({ registerTool } as any, process.cwd(), sdkTool, MockText);
 	return registerTool.mock.calls[0]?.[0];
 }
 
@@ -151,7 +151,6 @@ describe("bash execution", () => {
 		registerBashTool(
 			{ registerTool } as any,
 			process.cwd(),
-			undefined,
 			{
 				description: "bash",
 				parameters: {},
@@ -187,7 +186,6 @@ describe("bash execution", () => {
 		registerBashTool(
 			{ registerTool } as any,
 			process.cwd(),
-			undefined,
 			{
 				description: "bash",
 				parameters: {},

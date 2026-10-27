@@ -467,12 +467,8 @@ Note that `ask_user_question` is deliberately stripped in non-interactive runs
 ### Message and tool rendering (pi-pretty)
 
 `@heyhuynhgiabuu/pi-pretty` styles what the TUI prints: a syntax-highlighted `read` preview,
-re-registered `read`/`edit` tool rows, and — with `toolStyle: "claudecode"` — a Claude
-Code-shaped transcript: a collapsed tool call is one `✓ Name (args)` row plus a `└` result
-row (spinner while running, `·` waiting, `✗` failed, `⊘` result lost), consecutive calls
-fold into `Done (…)` / `Running (…)` groups, hidden thinking reads `thought 3s`, and the
-input box drops its rounded border for plain rules with a flush-left `❯` (user messages
-lose their `❯` marker). It hooks internal surfaces — patches to Pi's
+a coloured `bash` exit summary, tree-oriented `ls`, grouped `find`/`grep` results, and the
+boxed prompt editor with a `❯` marker on user messages. It hooks internal surfaces — patches to Pi's
 `AssistantMessageComponent` / `ToolExecutionComponent` / chat `Container` — and every patch
 installs inside `session_start` behind `ctx.mode === "tui"`, so `pi -p`, RPC and `--export`
 are unaffected.
@@ -482,12 +478,19 @@ This repo ships it as `config/pi-pretty.json`; `install.sh` installs it when abs
 otherwise prints a diff — the live file is the one a person tunes:
 
 ```json
-{ "toolStyle": "claudecode" }
+{
+  "workingIndicator": {
+    "enabled": true, "text": ["Working…"], "mode": "shimmer",
+    "low": "dim", "stops": "theme", "bold": true,
+    "sessionAccent": false, "intervalMs": 33
+  },
+  "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
+}
 ```
 
 Everything except `background.*` is read once at startup, so a config change needs a Pi
-**restart**, not just `/reload`. `toolStyle: "default"` keeps Pi's own tool rows; the
-`claudecode` value is the one this repo ships.
+**restart**, not just `/reload`. The file used to carry `toolStyle: "claudecode"`; that
+style and its key are gone, so the template no longer ships it.
 
 `icons: "nerd"` is the default and needs a Nerd Font; `none` falls back to plain ASCII.
 `theme` only drives the `read` preview — `settings.json`'s `theme: "system"` is not a Shiki
@@ -720,7 +723,6 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
 
 ```json
 {
-  "toolStyle": "claudecode",
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim",

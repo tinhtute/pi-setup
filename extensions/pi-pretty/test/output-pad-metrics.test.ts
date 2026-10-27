@@ -376,7 +376,6 @@ describe("read width budget and highlight seam", () => {
 		registerReadTool(
 			{ registerTool: (t: any) => (tool = t) } as any,
 			"/tmp",
-			undefined,
 			{ execute: async () => ({ content: [] }), parameters: {} } as any,
 			MockText,
 			renderContent,

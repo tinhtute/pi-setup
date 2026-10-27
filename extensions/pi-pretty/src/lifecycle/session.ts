@@ -1,7 +1,6 @@
 /**
  * Everything that has to be wired at session granularity: the working row, the
- * animated hidden-thinking label, the prompt editor, Claude-style grouping, and
- * the FFF finder bootstrap.
+ * animated hidden-thinking label, the prompt editor, and the user-message rail.
  *
  * Split out of index.ts because this is the only part of the extension that owns
  * mutable per-session state. Keeping it in one place makes the lifecycle
@@ -19,16 +18,7 @@ import type {
 	SessionInfoChangedEvent,
 } from "@earendil-works/pi-coding-agent";
 import * as hostSdk from "@earendil-works/pi-coding-agent";
-import { createFffAutocompleteProvider } from "../autocomplete.js";
-import {
-	installClaudeChatGrouping,
-	installClaudeExternalToolRenderers,
-	resetClaudeStyleSessionState,
-	setClaudeStyleAgentActive,
-	setClaudeStyleTheme,
-} from "../claude-style.js";
 import { getDefaultAgentDir, loadConfig, type PrettyConfig } from "../config.js";
-import { type FffInitOptions, type FffService, isFffRestrictedBasePathError } from "../fff.js";
 import { installGradientLabels, uninstallGradientLabels } from "../indicator/gradient.js";
 import { createPromptEditorClass } from "../prompt-editor.js";
 import type { PiPrettyDeps } from "../types.js";
@@ -57,14 +47,11 @@ type EditorUiCompatibility = {
 export interface SessionLifecycleOptions {
 	pi: ExtensionAPI;
 	config: PrettyConfig;
-	claudeStyle: boolean;
-	fffService: FffService | null;
-	fffInitOptions: FffInitOptions;
 	deps?: PiPrettyDeps;
 }
 
 export function installSessionLifecycle(options: SessionLifecycleOptions): void {
-	const { pi, config, claudeStyle, fffService, fffInitOptions, deps } = options;
+	const { pi, config, deps } = options;
 
 	const workingSettings = resolveWorkingIndicatorSettings(config.workingIndicator);
 	const thinkingSettings = resolveThinkingIndicatorSettings(config.thinkingIndicator);
@@ -85,16 +72,12 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		const editorUi = ctx.ui as unknown as EditorUiCompatibility;
 		if (typeof editorUi.setEditorComponent !== "function") return;
 		previousEditorFactory = editorUi.getEditorComponent?.();
-		const PromptEditor = createPromptEditorClass(
-			hostCustomEditor,
-			(icon) => {
-				const theme = ctx.ui.theme;
-				return typeof theme.getThinkingBorderColor === "function"
-					? theme.getThinkingBorderColor(ctx.thinkingLevel ?? "off")(icon)
-					: theme.fg("thinkingText", icon);
-			},
-			!claudeStyle,
-		);
+		const PromptEditor = createPromptEditorClass(hostCustomEditor, (icon) => {
+			const theme = ctx.ui.theme;
+			return typeof theme.getThinkingBorderColor === "function"
+				? theme.getThinkingBorderColor(ctx.thinkingLevel ?? "off")(icon)
+				: theme.fg("thinkingText", icon);
+		});
 		editorUi.setEditorComponent((tui, theme, keybindings) => new PromptEditor(tui, theme, keybindings));
 		promptEditorInstalled = true;
 	};
@@ -167,7 +150,6 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 
 	pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
 		if (ctx.mode === "tui") {
-			setClaudeStyleTheme(ctx.ui.theme);
 			// Host-written status labels (compacting, retry, summarize, and the plain
 			// "Working (… to interrupt)" restored after a reload) bypass pi-pretty's
 			// frames and arrive as one flat colour. Route them through the same frame
@@ -178,8 +160,6 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 				// the palette must follow without a restart.
 				getTheme: () => ctx.ui.theme as unknown as WorkingThemeLike,
 			});
-			installClaudeChatGrouping(claudeStyle);
-			installClaudeExternalToolRenderers(hostSdk.ToolExecutionComponent, claudeStyle);
 			installPromptEditor(ctx);
 			setUserRail(loadConfig().userRail);
 			installUserRail((hostSdk as unknown as { UserMessageComponent?: unknown }).UserMessageComponent);
@@ -196,35 +176,6 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 			workingSessionName = safeSessionName(ctx);
 			await installIndicator(ctx);
 		}
-
-		if (!fffService) return;
-
-		try {
-			// Try dynamic import if sync require failed
-			if (!fffService.isModuleLoaded()) {
-				const loaded = await fffService.tryLoadModule();
-				if (!loaded) return;
-			}
-
-			await fffService.ensureFinder(ctx.cwd, fffInitOptions);
-			if (fffService.partialIndex) {
-				ctx.ui?.notify?.("FFF: scan timed out — using partial index. Run /fff-rescan when ready.", "warning");
-			} else {
-				const ui = ctx.ui;
-				ui?.setStatus?.("fff", "FFF indexed");
-				setTimeout(() => ui?.setStatus?.("fff", undefined), 3000);
-			}
-
-			// Register FFF-backed @-mention autocomplete only after a finder exists.
-			ctx.ui?.addAutocompleteProvider?.((current) =>
-				createFffAutocompleteProvider(current, () => fffService?.getFinder() ?? null),
-			);
-		} catch (error: unknown) {
-			// Root/home refusal is an intentional FFF safety boundary. FFF is an
-			// accelerator, so fall back to the SDK without interrupting startup.
-			if (isFffRestrictedBasePathError(error, fffInitOptions)) return;
-			ctx.ui?.notify?.(`FFF init failed: ${error instanceof Error ? error.message : String(error)}`, "warning");
-		}
 	});
 
 	// Re-apply the indicator when the session is (re)named so the accent tint
@@ -240,13 +191,11 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 	pi.on("agent_start", async (_event: unknown, ctx: ExtensionContext) => {
 		if (ctx.mode !== "tui") return;
 		workingStreaming = true;
-		setClaudeStyleAgentActive(true);
 		workingController?.start();
 	});
 	const stopStreaming = async (_event: unknown, ctx: ExtensionContext): Promise<void> => {
 		if (ctx.mode !== "tui") return;
 		workingStreaming = false;
-		setClaudeStyleAgentActive(false);
 		workingController?.stop();
 		stopThinkingShimmer();
 	};
@@ -396,11 +345,5 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		thinkingElapsedMs.clear();
 		workingStreaming = false;
 		uninstallGradientLabels();
-		resetClaudeStyleSessionState();
-		// Intentionally keep the native FFF finder on session shutdown.
-		// Pi can emit shutdown/start during resume or session switching while the
-		// process keeps running. Native teardown, or dropping the JS handle while the
-		// native LMDB frecency env stays open, can make the next init fail with
-		// "environment already open in this program". Let process exit reclaim it.
 	});
 }

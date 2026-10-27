@@ -36,7 +36,6 @@
 		"lint:fix": "biome check --fix src/"
 	},
 	"dependencies": {
-		"@ff-labs/fff-node": "^0.10.0",
 		"@shikijs/cli": "^4.0.2",
 		"shiki": "4.0.2"
 	},

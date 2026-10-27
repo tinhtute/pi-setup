@@ -70,7 +70,7 @@ describe("ls entry count", () => {
 	it("does not count SDK truncation notices as entries", async () => {
 		const tools = new Map<string, any>();
 		const text = "a.ts\nb/\n\n[500 entries limit reached. Use limit=1000 for more]";
-		registerLsTool({ registerTool: (t: any) => tools.set(t.name, t) } as any, "/p", null, {
+		registerLsTool({ registerTool: (t: any) => tools.set(t.name, t) } as any, "/p", {
 			execute: async () => ({ content: [{ type: "text", text }] }),
 			parameters: {},
 		} as any);
