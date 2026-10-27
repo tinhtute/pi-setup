@@ -71,7 +71,6 @@ function restoreBashResultRender(ctx: RenderCtxLike, text: ComponentLike): void 
 export function registerBashTool(
 	pi: ExtensionAPI,
 	_cwd: string,
-	_fffService: unknown,
 	sdkTool: SdkToolDef,
 	TextComp?: new (t?: string, x?: number, y?: number) => { setText(v: string): void },
 ): void {

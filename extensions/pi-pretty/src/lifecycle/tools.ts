@@ -8,8 +8,6 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import * as hostSdk from "@earendil-works/pi-coding-agent";
-import { withClaudeToolStyleApi } from "../claude-style.js";
-import type { FffService } from "../fff.js";
 import { registerBashTool } from "../tools/bash.js";
 import { registerFindTool } from "../tools/find.js";
 import { registerGrepTool } from "../tools/grep.js";
@@ -20,16 +18,14 @@ import type { PiPrettyDeps, SdkTools } from "../types.js";
 export interface ToolRegistrationOptions {
 	pi: ExtensionAPI;
 	cwd: string;
-	fffService: FffService | null;
 	isToolEnabled(name: string): boolean;
-	claudeStyle: boolean;
 	/** Injected Text component for custom rendering; falls back to the host's. */
 	textComponent: PiPrettyDeps["TextComponent"];
 	depsSdk?: SdkTools;
 }
 
 export function registerPrettyTools(options: ToolRegistrationOptions): void {
-	const { pi, cwd, fffService, isToolEnabled, claudeStyle, textComponent, depsSdk } = options;
+	const { pi, cwd, isToolEnabled, textComponent, depsSdk } = options;
 
 	// Pi aliases static SDK imports to its host package for managed extensions.
 	// Native dynamic imports bypass that alias because the managed npm root omits
@@ -47,20 +43,19 @@ export function registerPrettyTools(options: ToolRegistrationOptions): void {
 	const createFindTool = sdk.createFindToolDefinition ?? sdk.createFindTool;
 	const createGrepTool = sdk.createGrepToolDefinition ?? sdk.createGrepTool;
 
-	const toolPi = claudeStyle ? withClaudeToolStyleApi(pi) : pi;
 	if (isToolEnabled("read") && createReadTool) {
-		registerReadTool(toolPi, cwd, null, createReadTool(cwd), textComponent);
+		registerReadTool(pi, cwd, createReadTool(cwd), textComponent);
 	}
 	if (isToolEnabled("bash") && createBashTool) {
-		registerBashTool(toolPi, cwd, null, createBashTool(cwd), textComponent);
+		registerBashTool(pi, cwd, createBashTool(cwd), textComponent);
 	}
 	if (isToolEnabled("ls") && createLsTool) {
-		registerLsTool(toolPi, cwd, null, createLsTool(cwd), textComponent);
+		registerLsTool(pi, cwd, createLsTool(cwd), textComponent);
 	}
 	if (isToolEnabled("find") && createFindTool) {
-		registerFindTool(toolPi, cwd, fffService, createFindTool(cwd), textComponent);
+		registerFindTool(pi, cwd, createFindTool(cwd), textComponent);
 	}
 	if (isToolEnabled("grep") && createGrepTool) {
-		registerGrepTool(toolPi, cwd, fffService, createGrepTool(cwd), textComponent);
+		registerGrepTool(pi, cwd, createGrepTool(cwd), textComponent);
 	}
 }

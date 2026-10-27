@@ -5,7 +5,6 @@
 	},
 	"theme": "github-dark",
 	"icons": "nerd",
-	"toolStyle": "default",
 	"userRail": "#3a3a4a",
 	"enableTools": [
 		"ls"
@@ -14,10 +13,6 @@
 	"maxHlChars": 80000,
 	"maxPreviewLines": 80,
 	"cacheLimit": 128,
-	"fff": {
-		"enableHomeScanning": false,
-		"enableRootScanning": false
-	},
 	"workingIndicator": {
 		"enabled": true,
 		"text": [

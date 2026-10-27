@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Removed
+
+- **FFF plumbing** (`@ff-labs/fff-node`): the bundled index service, the `@mention` autocomplete
+provider, the `/fff-health` and `/fff-rescan` commands, the `--pretty-fff-home-scan` /
+`--pretty-fff-root-scan` flags, the `PRETTY_FFF_*` env vars, the `fff` config block, the
+`NOTICE_PARTIAL_FILE_INDEX` footer, and `find-glob` (the FFF glob normaliser). `find` and `grep`
+keep their pretty renderers but now always execute through Pi's SDK (`fd` / ripgrep), which is the
+path they already fell back to.
+- **`toolStyle: "claudecode"`**: the collapsed tool rows, the group folding, the `claudecode`
+thinking labels, and the unboxed prompt editor. Tool output always uses pi-pretty's full rendering,
+the input box is always boxed, and user messages keep their `❯` prefix.
+
 ### Added
 
 - `workingIndicator.stops` (2+ `#rrggbb`) paints the shimmer band as a continuous multi-stop

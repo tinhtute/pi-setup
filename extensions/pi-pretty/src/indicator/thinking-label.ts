@@ -6,12 +6,11 @@
  * component so each row keeps its own accumulated duration.
  */
 
-import { keyText } from "@earendil-works/pi-coding-agent";
 import { hexToAnsiFg, sessionAccentHex } from "../session-color.js";
 import { buildWorkingFrames } from "./frames.js";
 import { colorToAnsi, FG_THINKING_FALLBACK, resolvePaletteAnsi } from "./palette.js";
-import { resolveStops } from "./theme-stops.js";
 import type { WorkingIndicatorSettings } from "./settings.js";
+import { resolveStops } from "./theme-stops.js";
 import type { ThinkingIndicatorSettings } from "./thinking-settings.js";
 import type { ResolvedPalette, ThinkingUiLike } from "./types.js";
 
@@ -117,20 +116,10 @@ export interface ThinkingTimer {
 	restore(): void;
 }
 
-let claudeThinkingLabels = false;
-/** claudecode tool style: flush-left `thinking` / `thought 3s` instead of ` Thinking...` / ` Thought for 3s`. */
-export function setClaudeThinkingLabels(enabled: boolean): void {
-	claudeThinkingLabels = enabled;
-}
-const thinkingLabel = (): string => (claudeThinkingLabels ? "thinking" : " Thinking...");
-const padThinkingLabel = (label: string): string =>
-	claudeThinkingLabels || label.startsWith(" ") ? label : ` ${label}`;
-/** Settled label for a finished thinking run; claudecode style appends the toggle hint when bound. */
-const thoughtLabel = (ms: number): string => {
-	if (!claudeThinkingLabels) return ` Thought for ${formatThinkingDuration(ms)}`;
-	const key = keyText("app.thinking.toggle");
-	return `thought ${formatThinkingDuration(ms)}${key ? ` (${key} to expand)` : ""}`;
-};
+const thinkingLabel = (): string => " Thinking...";
+const padThinkingLabel = (label: string): string => (label.startsWith(" ") ? label : ` ${label}`);
+/** Settled label for a finished thinking run. */
+const thoughtLabel = (ms: number): string => ` Thought for ${formatThinkingDuration(ms)}`;
 
 /** Format sub-second elapsed time as milliseconds, then use compact whole seconds. */
 export function formatThinkingDuration(elapsedMs: number): string {

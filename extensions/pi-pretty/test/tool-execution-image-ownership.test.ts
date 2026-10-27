@@ -23,7 +23,6 @@ function readTool(content: ToolContent[] = [{ type: "image", data: "aW1hZ2U=", m
 	registerReadTool(
 		{ registerTool: (definition: any) => (tool = definition) } as any,
 		process.cwd(),
-		undefined,
 		{
 			description: "read fixture",
 			parameters: { type: "object", properties: {} },

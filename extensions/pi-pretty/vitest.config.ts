@@ -5,10 +5,8 @@ import { defineConfig } from "vitest/config";
 
 // The suite exercises the extension with the config directory it would find on a real
 // machine. Without an override, `loadConfig()` reads ~/.pi/agent/pi-pretty.json, so the
-// operator's own theme/toolStyle leaks into assertions: with `toolStyle: "claudecode"`
-// set locally, `registerMarkdownTransformer` is legitimately skipped and 82 tests fail
-// (measured on v0.8.0). Point it at an empty directory instead so the suite tests the
-// code, not this laptop.
+// operator's own theme, icons, and tool sets leak into assertions. Point it at an empty
+// directory instead so the suite tests the code, not this laptop.
 const isolatedConfigDir = mkdtempSync(join(tmpdir(), "pi-pretty-test-cfg-"));
 
 export default defineConfig({

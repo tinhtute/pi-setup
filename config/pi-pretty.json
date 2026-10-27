@@ -1,5 +1,4 @@
 {
-  "toolStyle": "claudecode",
   "workingIndicator": {
     "enabled": true,
     "text": ["Working…"],

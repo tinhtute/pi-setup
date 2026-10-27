@@ -6,12 +6,6 @@ import type { ConstrainedSamplingConfig, ImageContent, TextContent } from "@eare
 import type { AgentToolResult, CustomEditor } from "@earendil-works/pi-coding-agent";
 
 // ---------------------------------------------------------------------------
-// Re-export FFF types needed by tools
-// ---------------------------------------------------------------------------
-
-export type { FileFinder, FileItem, GrepCursor, GrepMatch, GrepResult, SearchResult } from "@ff-labs/fff-node";
-
-// ---------------------------------------------------------------------------
 // Content / Result types
 // ---------------------------------------------------------------------------
 
@@ -166,42 +160,6 @@ export interface SdkTools {
 }
 
 // ---------------------------------------------------------------------------
-// FFF service interfaces
-// ---------------------------------------------------------------------------
-
-/** Options for creating the FFF finder. Declared here so the type module does not
- * depend on the implementation module; fff.ts imports it back. */
-export interface FffInitOptions {
-	enableHomeDirScanning: boolean;
-	enableFsRootScanning: boolean;
-}
-
-/** Minimal FFF service shape for tools that only need fileSearch. */
-export interface FffServiceLike {
-	readonly isAvailable: boolean;
-	readonly partialIndex: boolean;
-	getFinder(): import("@ff-labs/fff-node").FileFinder | null;
-}
-
-/** Full FFF service for grep tools that also need cursor store. */
-export interface FffServiceWithCursor extends FffServiceLike {
-	getCursorStore(): CursorStore;
-}
-
-/** FFF lifecycle interface (used by session lifecycle code). */
-export interface FffService extends FffServiceWithCursor {
-	ensureFinder(cwd: string, options?: FffInitOptions): Promise<void>;
-	destroy(): void;
-	isModuleLoaded(): boolean;
-	tryLoadModule(): Promise<boolean>;
-}
-
-export interface CursorStore {
-	store(cursor: unknown): string;
-	get(id: string): unknown | undefined;
-}
-
-// ---------------------------------------------------------------------------
 // DI
 // ---------------------------------------------------------------------------
 
@@ -210,7 +168,6 @@ export type CustomEditorConstructor = new (...args: ConstructorParameters<typeof
 export interface PiPrettyDeps {
 	sdk?: SdkTools;
 	TextComponent?: new (text?: string, x?: number, y?: number) => ComponentLike;
-	fffModule?: typeof import("@ff-labs/fff-node");
 	/** Host AssistantMessageComponent class for the per-row label patch; defaults
 	 * to the package export. Injectable so tests can verify against the exact
 	 * class instance they construct rows from. */

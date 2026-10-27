@@ -342,20 +342,7 @@ extension statuses.
 skills. Also supports multi-skill pipeline chains such as `$think -> $work`
 or `$think ➔ $work`, combining stages sequentially into a single pipeline prompt.
 
-**`pretty-border.ts`** — puts the rounded frame back on the input box that
-`pi-pretty`'s `toolStyle: "claudecode"` strips. In that style pi-pretty installs its
-prompt editor with `boxed = false`, so `renderTopBorder` returns Pi's plain
-`"─".repeat(width)` rule instead of `╭─ … ─╮`. The extension wraps whatever editor
-factory is installed (`ctx.ui.getEditorComponent()` → `setEditorComponent`) and rounds
-the two border lines with pi-pretty's own math (`sliceByColumn(line, 1, width - 2,
-true)` painted by `editor.borderColor`), so the frame keeps the theme's border colour.
-It no-ops outside the TUI, wraps at most once (a `WeakSet` of factories we produced),
-and re-checks on every `agent_start` because pi-pretty may install a new factory after
-ours. `/input-border off` restores the plain rules and sticks; `on` puts them back.
-`tests/test-pretty-border.mjs` pins the width invariant and the four guards a reviewer
-found missing in the first draft.
-
-These five extensions are plain TypeScript, loaded directly from
+These four extensions are plain TypeScript, loaded directly from
 `~/.pi/agent/extensions/`; the header and footer activate automatically in TUI mode.
 Tool rendering, skill chips, and summary cards are back to Pi's stock presentation — the
 custom versions were removed on 2026-10-21 and survive only in git history. The tool
@@ -467,12 +454,8 @@ Note that `ask_user_question` is deliberately stripped in non-interactive runs
 ### Message and tool rendering (pi-pretty)
 
 `@heyhuynhgiabuu/pi-pretty` styles what the TUI prints: a syntax-highlighted `read` preview,
-re-registered `read`/`edit` tool rows, and — with `toolStyle: "claudecode"` — a Claude
-Code-shaped transcript: a collapsed tool call is one `✓ Name (args)` row plus a `└` result
-row (spinner while running, `·` waiting, `✗` failed, `⊘` result lost), consecutive calls
-fold into `Done (…)` / `Running (…)` groups, hidden thinking reads `thought 3s`, and the
-input box drops its rounded border for plain rules with a flush-left `❯` (user messages
-lose their `❯` marker). It hooks internal surfaces — patches to Pi's
+a coloured `bash` exit summary, tree-oriented `ls`, grouped `find`/`grep` results, and the
+boxed prompt editor with a `❯` marker on user messages. It hooks internal surfaces — patches to Pi's
 `AssistantMessageComponent` / `ToolExecutionComponent` / chat `Container` — and every patch
 installs inside `session_start` behind `ctx.mode === "tui"`, so `pi -p`, RPC and `--export`
 are unaffected.
@@ -482,12 +465,19 @@ This repo ships it as `config/pi-pretty.json`; `install.sh` installs it when abs
 otherwise prints a diff — the live file is the one a person tunes:
 
 ```json
-{ "toolStyle": "claudecode" }
+{
+  "workingIndicator": {
+    "enabled": true, "text": ["Working…"], "mode": "shimmer",
+    "low": "dim", "stops": "theme", "bold": true,
+    "sessionAccent": false, "intervalMs": 33
+  },
+  "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
+}
 ```
 
 Everything except `background.*` is read once at startup, so a config change needs a Pi
-**restart**, not just `/reload`. `toolStyle: "default"` keeps Pi's own tool rows; the
-`claudecode` value is the one this repo ships.
+**restart**, not just `/reload`. The file used to carry `toolStyle: "claudecode"`; that
+style and its key are gone, so the template no longer ships it.
 
 `icons: "nerd"` is the default and needs a Nerd Font; `none` falls back to plain ASCII.
 `theme` only drives the `read` preview — `settings.json`'s `theme: "system"` is not a Shiki
@@ -563,7 +553,6 @@ pi-setup/
     ├── test-get-secret.mjs
     ├── test-package-selection.mjs
     ├── test-peer-deps.mjs
-    ├── test-pretty-border.mjs
     ├── test-rewind.mjs
     ├── test-web-search-config.mjs
     └── test-worker-agent.mjs
@@ -595,7 +584,6 @@ rm ~/.pi/agent/extensions/custom-banner.ts
 rm ~/.pi/agent/extensions/custom-footer.ts
 rm ~/.pi/agent/extensions/dollar-skill.ts
 rm -r ~/.pi/agent/extensions/confirm-guard
-rm ~/.pi/agent/extensions/pretty-border.ts
 rm -rf ~/.pi/agent/extensions/account-pool
 rm -rf ~/.pi/agent/extensions/rewind
 rm ~/.pi/agent/scripts/get-secret.sh
@@ -720,7 +708,6 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
 
 ```json
 {
-  "toolStyle": "claudecode",
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim",

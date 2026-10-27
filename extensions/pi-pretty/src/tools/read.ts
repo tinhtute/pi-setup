@@ -53,7 +53,6 @@ function renderSkillHeader(skillName: string, expanded: boolean, theme: ThemeLik
 export function registerReadTool(
 	pi: ExtensionAPI,
 	cwd: string,
-	_fffService: unknown,
 	sdkTool: SdkToolDef,
 	TextComp?: new (t?: string, x?: number, y?: number) => { setText(v: string): void },
 	renderContent: typeof renderFileContent = renderFileContent,

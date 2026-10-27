@@ -245,7 +245,7 @@ describe("thinking timer lifecycle wiring", () => {
 
 	it("substitutes labels on the real host component: completed rows freeze, active rows animate", async () => {
 		// Resolve the host through node's own loader (import.meta.resolve +
-		// pathToFileURL, the fff-integration pattern) and inject the exact class
+		// pathToFileURL, the extension-entrypoint pattern) and inject the exact class
 		// via deps — vitest's module graph would otherwise duplicate the instance.
 		const { fileURLToPath, pathToFileURL } = await import("node:url");
 		const hostEntry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));

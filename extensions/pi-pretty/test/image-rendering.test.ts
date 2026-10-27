@@ -23,7 +23,6 @@ function loadReadTool(content: ToolContent[]) {
 	registerReadTool(
 		{ registerTool: (definition: any) => (tool = definition) } as any,
 		process.cwd(),
-		undefined,
 		{
 			description: "read fixture",
 			parameters: { type: "object", properties: {} },
