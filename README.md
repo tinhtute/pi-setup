@@ -646,6 +646,16 @@ dialog, because it is the thing you are agreeing to. The dialog takes the editor
 slot and fills it: rail, two-column gutter, then the text, so it looks the same
 on an 80-column terminal as on a 200-column one.
 
+Colours are theme tokens, so `/theme` repaints the dialog: the rail and the hints are
+`dim`, metadata is `muted`, the command is `text`, and the emphasis register — title,
+`>` pointer, selected option — is the theme's `accent`, the colour you read as the
+theme's primary colour. One exception: a theme whose accent is *darker* than its own
+`dim` would render the selection as if disabled. The bundled `cyan` theme is exactly
+that case (`#4d788e` accent against a `#7e888e` rail), so there `border` carries the
+emphasis instead. Everything sampled from Claude Code's prompt originally: `border`
+on the generated system theme is a blue-cyan `#56a2c7`, which is the wrong colour
+family next to a violet prompt.
+
 **Position matters as much as the shape.** The dialog is not an overlay: an
 overlay floats in the middle of the screen, covering the conversation and
 detached from it. It is pushed into the editor slot instead, so it appears
