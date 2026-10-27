@@ -4,7 +4,11 @@ Working note, not a spec. Purpose: decide what to delete from the vendored
 `extensions/pi-pretty` so the TUI stays maintainable, without losing anything the
 owner actually uses.
 
-Snapshot: `pi-pretty-vendored 0.8.0`, branch base `main@4af1300`.
+**Status: in progress.** Round 1 shipped in #20 (slices D and B5, ~3 500 lines).
+The section [Progress](#progress) records what is done and what is next; the
+inventory below is the measurement the ranking rests on.
+
+Snapshot: `main@1f9628a` (after #20). Round 1 was measured at `4af1300`.
 
 ## How the numbers were produced
 
@@ -14,45 +18,49 @@ exercises the row.
 
 ```bash
 cd extensions/pi-pretty && find src -name '*.ts' | xargs wc -l | sort -n
-ls test                     # 26 files, 384 tests
+ls test | wc -l
 npx vitest list | wc -l
 ```
 
-Totals: **6 593 LOC** of `src/`, **26 test files**, **384 passing tests**.
+| | `4af1300` (round 1 base) | `1f9628a` (now) |
+|---|---|---|
+| `src/` LOC | 6 593 | **4 621** |
+| test files | 26 | **24** |
+| passing tests | 384 | **295** |
 
 It is a vendored fork (`package.json` → `"name": "pi-pretty-vendored"`), installed
 by `setup/install.sh` (step 4b) and loaded through `config/settings.json`
 (`"extensions/pi-pretty"`). There is no upstream to stay compatible with, so
 deleting features here costs nothing but the maintenance win.
 
-## A. Tool output rendering — 1 939 LOC, 11 test files
+## A. Tool output rendering — 1 644 LOC, 11 test files
 
 The reason the extension exists. Everything here is on by default except `ls`.
 
 | # | Feature | Code | LOC | Tests |
 |---|---|---|---|---|
-| A1 | `read`: Shiki syntax highlighting, line numbers, `read docs` labels for Pi documentation, inline images (kitty `ESC _G` / iTerm2 `ESC ]1337;File=`) | `tools/read.ts`, `render.ts`, `tui-text.ts`, `tools/labels.ts`, `helpers.ts` | 998 | `read-skill-rendering`, `image-rendering`, `tool-result-integrity`, `tool-title-spacing`, `tool-labels`, `tool-execution-image-ownership` |
-| A2 | `bash`: coloured exit summary (`exit 0`/`exit 1`) + preview body of the output | `tools/bash.ts` | 225 | `bash-rendering` |
-| A3 | `ls`: Nerd Font file-type icons, tree-oriented listing — **disabled by default** (`DEFAULT_DISABLED_TOOLS`) | `tools/ls.ts` (+ shared `config/icons.ts`) | 130 | `ls-tree-icons` |
-| A4 | `find` / `grep`: replace the built-ins with FFF-backed search, frecency-ranked, grouped + highlighted rendering, glob normalisation | `tools/find.ts`, `tools/grep.ts`, `find-glob.ts` | 439 | `find-glob`, `fff-integration` |
+| A1 | `read`: Shiki syntax highlighting, line numbers, `read docs` labels for Pi documentation, inline images (kitty `ESC _G` / iTerm2 `ESC ]1337;File=`) | `tools/read.ts`, `render.ts`, `tui-text.ts`, `tools/labels.ts`, `helpers.ts` | 943 | `read-skill-rendering`, `image-rendering`, `tool-result-integrity`, `tool-title-spacing`, `tool-labels`, `tool-execution-image-ownership`, `tui-text`, `tool-prompt-metadata` |
+| A2 | `bash`: coloured exit summary (`exit 0`/`exit 1`) + preview body of the output | `tools/bash.ts` | 224 | `bash-rendering` |
+| A3 | `ls`: Nerd Font file-type icons, tree-oriented listing — **disabled by default** (`DEFAULT_DISABLED_TOOLS`) | `tools/ls.ts` (+ shared `config/icons.ts`) | 129 | `ls-tree-icons` |
+| A4 | `find` / `grep`: re-registered over Pi's SDK (`fd` / ripgrep), grouped + highlighted rendering, notices | `tools/find.ts`, `tools/grep.ts` | 288 | `find-grep-sdk` |
 | A5 | Tool metrics: elapsed time + output size recorded in `result.details` and shown in headers | `tools/metrics.ts` | 60 | `output-pad-metrics` |
 | A6 | Block backgrounds: `background.tool`, `background.error` | `config/ansi.ts`, `config/config-file.ts` | in E1 | `theme-resolution` |
 
-## B. Conversation chrome and editor — 1 183 LOC, 5 test files
+## B. Conversation chrome and editor — 363 LOC, 3 test files
 
 | # | Feature | Code | LOC | Tests |
 |---|---|---|---|---|
-| B1 | `❯` prompt icon on user messages, injected through `registerMarkdownTransformer` | `index.ts:96-100` | in E3 | `user-message-rendering` |
-| B2 | User rail: one tinted cell instead of a full-width background, so acrylic/translucent terminals keep their blur | `user-rail.ts` | 80 | `user-rail` |
-| B3 | Prompt editor: boxed prompt with `❯`, live input coloured by the active thinking level | `prompt-editor.ts` | 117 | `prompt-editor` |
+| B1 | `❯` prompt icon on user messages, injected through `registerMarkdownTransformer` | `index.ts` | in E5 | `user-message-rendering` |
+| B2 | User rail: one tinted cell instead of a full-width background, so acrylic/translucent terminals keep their blur — **disabled by default** (no `userRail` key in the shipped config) | `user-rail.ts` | 80 | `user-rail` |
+| B3 | Prompt editor: boxed prompt with `❯`, live input coloured by the active thinking level | `prompt-editor.ts` | 111 | `prompt-editor` |
 | B4 | Per-session accent: session name hashed (djb2) to a hue on an OKLCH arc, stable per session, dimmed variant for the spinner | `session-color.ts` | 172 | `session-color` |
-| B5 | `toolStyle: "claudecode"`: collapsed call rows with connector rows, consecutive tool calls folded into one group row — **opt-in, off by default** | `claude-style.ts` | 814 | `claude-style` |
+| ~~B5~~ | ~~`toolStyle: "claudecode"`~~ — **removed in #20** | — | 0 | — |
 
-## C. Animated indicators — 1 447 LOC, 5 test files
+## C. Animated indicators — 1 436 LOC, 5 test files
 
 | # | Feature | Code | LOC | Tests |
 |---|---|---|---|---|
-| C1 | Working indicator: `shimmer` / `kitt` / `static` modes, rotating phrases, `stops` (hex array or `"theme"`), `low`/`mid`/`high` tokens, `bold`, `hint`, `sessionAccent`, `intervalMs` | `indicator/{frames,gradient,stops,theme-stops,palette,settings,install}.ts` | 1 447 (shared with C2/C3) | `working-indicator`, `gradient-stops`, `gradient-labels`, `theme-stops`, `theme-resolution` |
+| C1 | Working indicator: `shimmer` / `kitt` / `static` modes, rotating phrases, `stops` (hex array or `"theme"`), `low`/`mid`/`high` tokens, `bold`, `hint`, `sessionAccent`, `intervalMs` | `indicator/{frames,gradient,stops,theme-stops,palette,settings,install}.ts` | 1 436 (shared with C2/C3) | `working-indicator`, `gradient-stops`, `gradient-labels`, `theme-stops`, `theme-resolution` |
 | C2 | Thinking label: animated hidden-thinking `Thinking…` row, per-row labels, accumulated per-row duration | `indicator/thinking-label.ts`, `thinking-settings.ts` | in C1 | `thinking-lifecycle` |
 | C3 | Host `Loader` labels (`Compacting…`, `Retrying…`, bash `Running…`, dialogs) shimmered with the same frame builder | `indicator/gradient.ts` | in C1 | `gradient-labels` |
 
@@ -61,57 +69,92 @@ Note: `stops: "theme"` resolves a five-step ramp around `theme.colors.accent`
 (`extensions/custom-banner.ts`) is a separate extension and keeps its fixed
 rainbow.
 
-## D. FFF plumbing — 484 LOC, 2 test files
+## D. FFF plumbing — 0 LOC
+
+**Removed in #20.** Was: `fff.ts`, `fff-helpers.ts`, `autocomplete.ts`
+(`@mention` provider), `lifecycle/fff-commands.ts` (`/fff-health`, `/fff-rescan`),
+`find-glob.ts`, `notices.ts`, plus the `@ff-labs/fff-node` dependency, the
+`--pretty-fff-*` flags, the `PRETTY_FFF_*` env vars and the `fff` config block.
+
+`find` / `grep` were not lost: they keep their renderers and now always run Pi's
+SDK implementation, which is the branch they already took whenever FFF was
+missing or out of scope.
+
+## E. Config, lifecycle, wiring — 1 178 LOC, 3 test files
 
 | # | Feature | Code | LOC | Tests |
 |---|---|---|---|---|
-| D1 | FFF service init, shared instance, `--pretty-fff-home-scan` / `--pretty-fff-root-scan` flags, `PRETTY_FFF_*` env | `fff.ts`, `fff-helpers.ts` | 393 | `fff-integration` |
-| D2 | `@mention` autocomplete ranked by frecency | `autocomplete.ts` | 91 | — |
-| D3 | `/fff` commands (`status`, rescan) | `lifecycle/fff-commands.ts` | 71 (inside E3) | `fff-integration` |
+| E1 | `~/.pi/agent/pi-pretty.json`: merge + normalise, `theme`, `icons`, `userRail`, `enableTools` / `disableTools`, `maxHlChars` 80 000, `maxPreviewLines` 80, `cacheLimit` 128 | `config/*` + the `config.ts` barrel | 493 | `config-merge`, `theme-resolution` |
+| E2 | Env vars: `PRETTY_DISABLE_TOOLS`, `PRETTY_ENABLE_TOOLS` (`PRETTY_FFF_*` removed in #20) | `config/config-file.ts` | in E1 | `extension-entrypoint` |
+| E3 | Lifecycle wiring: `session_start` → `session_shutdown`, `message_update` / `message_end`, `agent_start` / `agent_end`, tool registration, thinking timer | `lifecycle/session.ts`, `lifecycle/tools.ts` | 410 | `thinking-lifecycle`, `extension-entrypoint` |
+| E4 | Terminal width clamp at 210 columns | `config/terminal.ts` | in E1 | — |
+| E5 | Entry point, shared types, indicator barrel | `index.ts`, `types.ts`, `working-indicator.ts` | 275 | `extension-entrypoint` |
 
-## E. Config, lifecycle, wiring — 1 540 LOC, 3 test files
+## Progress
 
-| # | Feature | Code | LOC | Tests |
-|---|---|---|---|---|
-| E1 | `~/.pi/agent/pi-pretty.json`: merge + normalise, `theme`, `icons`, `toolStyle`, `enableTools` / `disableTools`, `maxHlChars` 80 000, `maxPreviewLines` 80, `cacheLimit` 128 | `config/*` | 527 | `config-merge`, `theme-resolution` |
-| E2 | Env vars: `PRETTY_DISABLE_TOOLS`, `PRETTY_ENABLE_TOOLS`, `PRETTY_FFF_*` | `config/config-file.ts:188-219` | in E1 | `extension-entrypoint` |
-| E3 | Lifecycle wiring: `session_start` → `session_shutdown`, `message_update` / `message_end`, `agent_start` / `agent_end`, tool registration, thinking timer | `lifecycle/session.ts`, `lifecycle/tools.ts`, `lifecycle/fff-commands.ts` | 543 | `thinking-lifecycle`, `extension-entrypoint` |
-| E4 | Terminal width clamp at 210 columns | `config/terminal.ts:5` | in E1 | — |
-| E5 | Entry point, shared types, FFF footers (`NOTICE_PARTIAL_FILE_INDEX`), indicator barrel | `index.ts`, `types.ts`, `notices.ts`, `working-indicator.ts` | 470 | `extension-entrypoint` |
+Round 1 — **done**, shipped in [#20](https://github.com/tinhtute/pi-setup/pull/20):
 
-## Trim candidates, ordered by LOC / separability
+- [x] D `fff.ts` + `fff-helpers.ts` + `autocomplete.ts` + `fff-commands.ts` + `find-glob.ts` + `notices.ts` + `@ff-labs/fff-node`
+- [x] B5 `claude-style.ts` (814) and the `toolStyle` key
+- [x] `extensions/pretty-border.ts` (206 + 97 test) — it only re-boxed the prompt B5 unboxed
+- [x] `config/pi-pretty.json`, `pi-pretty.example.json`, extension README, CHANGELOG, root README
+- [x] regression hole: `find`/`grep` lost their only test with `fff-integration`; `test/find-grep-sdk.test.ts` (7 cases) now pins the SDK passthrough, the `findResult`/`grepResult` details shape, the empty-answer normalisation, and CRLF handling
 
-| Priority | Slice | LOC removable | Tests removable | What is lost |
-|---|---|---|---|---|
-| 1 | B5 `claude-style.ts` (off by default) | 814 | `claude-style` | nothing in the current config; the opt-in style is gone |
-| 2 | C1 `kitt` + `static` modes, keep `shimmer` | ~100–150 (estimate, inside `indicator/frames.ts` + `settings.ts`) | a few cases | two alternative animations |
-| 3 | B4 `session-color.ts` | 172 | `session-color` | per-session tint (`sessionAccent`, thinking-level input colour) |
-| 4 | A3 `tools/ls.ts` (already off by default) | 130 | `ls-tree-icons` | the `ls` override; `config/icons.ts` stays, it is shared |
-| 5 | D2 `autocomplete.ts` | 91 | — | frecency-ranked `@mention`, falls back to Pi's built-in provider |
-| 6 | D1 home/root scan flags | ~30 (estimate, `config/config-file.ts`) | — | indexing `/` and `$HOME` by flag |
-| 7 | B2 `user-rail.ts` | 80 | `user-rail` | the one-cell rail; user messages go back to the host's rendering |
-| 8 | B3 `prompt-editor.ts` | 117 | `prompt-editor` | the boxed prompt around live input |
+Result: 6 593 → 4 621 LOC, 384 → 295 tests (26 → 24 files), −3 816 lines net.
 
-Slices 1–6 remove roughly **1 350 LOC and 3 test files** without touching a
-feature that is enabled today. Adding 7–8 brings it to about 1 550 LOC, at the
-cost of two visible changes.
+### What the round-1 test count hid
+
+`fff-integration.test.ts` was 890 lines and the *only* file that registered `find`
+or `grep`. Deleting it with the FFF plumbing left both tools untested — the count
+went 384 → 288 and looked like "only style tests left", but 4 of those missing
+tests were guarding two tools still in use. A per-file grep (`rg -l 'registerFindTool|registerGrepTool' test/`)
+returns nothing before the added file; run that after any future slice delete.
+
+### Next, in the order I would take them
+
+| Priority | Slice | LOC removable | Tests removable | What is lost | Risk |
+|---|---|---|---|---|---|
+| 1 | B4 `session-color.ts` | 172 | `session-color` | per-session tint: `sessionAccent`, the dimmed spinner variant, and the thinking-label hue | **already dead on this machine**: `install.ts:90` and `thinking-label.ts:217` both require `sessionAccent && !tiersCustomized && !stops`, and the shipped config sets `sessionAccent: false` *and* `stops: "theme"`, which wins regardless. Purge = 4 source call sites + `settings.sessionAccent` |
+| 2 | C1 `kitt` + `static` modes, keep `shimmer` | ~100–150 (estimate, inside `indicator/frames.ts` + `settings.ts`) | a few cases | two alternative animations | **check the config first**: shipped `mode` is `shimmer`, so the other two are dead weight here |
+| 3 | A3 `tools/ls.ts` | 129 | `ls-tree-icons` | the `ls` override; `config/icons.ts` stays, it is shared | **check the config first**: `DEFAULT_DISABLED_TOOLS` has `ls` and the shipped config does not re-enable it |
+| 4 | B2 `user-rail.ts` | 80 | `user-rail` | the one-cell rail; user messages go back to the host's rendering | shipped config has no `userRail` key, so nothing changes visually here |
+| 5 | B3 `prompt-editor.ts` | 111 | `prompt-editor` | the boxed prompt around live input | visible on every keystroke — decide, do not guess |
+
+Slices 1–4 remove roughly **500 LOC and 4 test files** without changing anything
+this machine renders today: each is gated off by a value in the shipped config.
+Slice 5 is the only one with a visible cost.
+
+### Method note from round 1
+
+The first version of this table ranked `claude-style.ts` as the cheapest cut
+because it was "off by default" and "nothing in the current config" was lost.
+That read the *code* default: `config/pi-pretty.json` — which `install.sh` copies
+to `~/.pi/agent/pi-pretty.json` — set `toolStyle: "claudecode"`, so the style was
+live on the only machine this repo boots. It was still the right slice to cut,
+but it cost a visible change rather than none.
+
+**So: open `config/pi-pretty.json` and `~/.pi/agent/pi-pretty.json` before trusting
+any row in the table above.** Every row now names the config key that makes it free
+or not — that check is the whole difference between a trim and a regression.
 
 ## What would change this answer
 
-- `toolStyle: "claudecode"` gets adopted → slice 1 is a feature, not dead weight, despite being the biggest file.
-- `ls` gets enabled (it is one config key away) → slice 4 is a feature.
+- `sessionAccent: true` gets turned on → slice 1 is a feature, not dead weight.
+- `workingIndicator.mode` becomes `kitt` or `static` → keep that mode, cut `shimmer` instead.
+- `ls` gets enabled (it is one config key away) → slice 3 is a feature.
 - A future Pi version ships its own shimmer / `Loader` styling → C3 becomes duplicate work and should be re-evaluated before C1.
 
 ## Continuing on another machine
 
 ```bash
-git switch docs/pi-pretty-feature-inventory
-cd extensions/pi-pretty && npx tsc --noEmit && npx vitest run   # 384 tests
-cd ../.. && TMPDIR=$HOME/.cache/tmp node tests/run-all.mjs       # 11 repo suites
+git switch docs/pi-pretty-feature-inventory && git merge main
+cd extensions/pi-pretty && npx tsc --noEmit && npx vitest run   # 295 tests
+cd ../.. && TMPDIR=$HOME/.cache/tmp node tests/run-all.mjs       # 10 repo suites
+npx biome check extensions/pi-pretty/src/                        # 2 errors, both pre-existing
 ```
 
 Deleting any slice means: remove the module, drop its config keys from
 `pi-pretty.example.json` and `config/pi-pretty.json`, delete its tests, update
 `extensions/pi-pretty/README.md` and the root `README.md`, then
-`rsync -a extensions/pi-pretty/ ~/.pi/agent/extensions/pi-pretty/` and `/reload`
-in Pi to see the result live.
+`rsync -a --delete --exclude node_modules --exclude dist extensions/pi-pretty/ ~/.pi/agent/extensions/pi-pretty/`
+and restart Pi (not just `/reload`: config is read at activation).
