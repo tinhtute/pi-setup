@@ -290,38 +290,52 @@ TINHTUTE banner. Centers and truncates using terminal display widths, with a
 compact fallback on narrow terminals. Adds `/custom-header` and `/builtin-header`
 to switch between headers at runtime.
 
-**`custom-footer.ts`** — replaces the TUI footer with a compact, live statusline:
+**`custom-footer.ts`** — replaces the TUI footer with the same statusline Claude
+Code renders, driven by Pi's own session data:
 
 ```text
- 👾 Opus 5.5 · low · ──────── 12% · ϟ 2.4k tpm · ★ 85% · ⌥ main
+👾 Opus 5.5 · high · ☂  ━━━───── 42% · ϟ 2.4k tpm · ★ 85% ◷ 5m · ⌥ main
 ```
 
-Shows the current model in orange (palette 208) and thinking level in ANSI
-magenta, matching the Claude Code statusline, plus context usage and Git branch
-(omitted outside Git). Matching Claude Code's statusline thresholds, the entire
-context segment is monochromatic: gray (`#9e9e9e`) below 50%, yellow (`#facc15`)
-from 50%, and red (`#f87171`) from 75%.
-Unknown context usage displays `?%` in gray.
+Segment order, thresholds, spacing, and colors are copied from
+`~/.claude/statusline.sh`, so the two lines are interchangeable. Colors are
+fixed ANSI rather than theme tokens — that script hardcodes them, and matching it
+byte for byte takes precedence over theme adaptation. Light terminals inherit
+Claude Code's readability, not Pi's theme's.
 
-The yellow `ϟ N tpm` segment shows the session-average input + output tokens per
-minute, using all recorded session usage and wall-clock time since the session
-header's creation timestamp. Cached read/write tokens are excluded. Idle time
-and time between closing and resuming a session count in the denominator; this
-is not output-only generation speed or Claude's own duration counter. The value
-updates on redraw, without a timer. It is hidden when tokens or valid elapsed
-time are unavailable, or the rate rounds down to zero. Formatting follows Claude:
-`999`, `1.0k`, `10k`.
+- `👾 model` (palette 208) then `effort` (ANSI 35). The effort segment is dropped
+  when Pi reports no thinking level or `off`, exactly as the script drops an
+  absent `.effort.level`.
+- Context is one monochromatic segment: a weather icon (`☀` <25, `☁` <50, `☂` <75,
+  `☇` <90, `↯` 90+) plus an eight-cell bar and the percentage. Fill is
+  `floor(percent) * 8 / 100` cells, so it sits one cell lower than rounding would
+  put it near a boundary. Color is ANSI 247 below 50%, 93 from 50%, 91 from 75%.
+  An unknown percentage renders as `0%`, matching the script's `// 0` default.
+- `ϟ N tpm` is **output tokens over summed API duration** — `Σ output_tokens /
+  Σ durationMs` across assistant messages on the active branch, deduplicated by
+  response id. Auxiliary usage entries (cache warming) are excluded. It is hidden
+  when either side is zero. Formatting follows Claude: `999`, `1.0k`, `10k`.
+- `★ N%` is the latest assistant's `cacheRead / (input + cacheRead + cacheWrite)`,
+  floored to a whole percent: green from 90%, yellow from 70%, red below.
+- `◷ Nm` counts down from that response's timestamp plus the model's declared
+  `promptCache` lifetime (`long` when the response wrote 1h-safe tokens). `❄ cold`
+  replaces it when the lifetime has passed or the model declares none.
+- `✗N cause` counts responses whose cached prefix lost more than half its tokens.
+  The label follows the script: `idle` (TTL expiry, yellow), `tools`, `sys`,
+  `server`, else the raw cause. A miss older than ten minutes loses its label and
+  turns dim. A prefix rebuild announced by compaction or a branch summary is not a
+  miss.
+- `⌥ branch` in ANSI 36, omitted outside a Git repository.
 
-The `★` segment shows the latest assistant's
-cache hit rate on the active branch: `cacheRead / (input + cacheRead + cacheWrite)`.
-It is hidden until valid usage is available. Matching the Claude Code statusline,
-the rate is truncated to a whole percent, and the entire `★ N%` segment is dim
-when no tokens were read from cache, red below 70%, yellow from 70%, and green
-from 90%. A known zero hit rate displays `★ 0%`.
-Other colors follow the active theme and the line truncates to fit the terminal.
-Adds `/custom-footer` and `/builtin-footer` to switch at
-runtime. The compact footer hides the built-in cwd, usage/cost totals, and other
-extension statuses; `/builtin-footer` restores them.
+The cache fields are a heuristic, not Claude Code's ledger: Pi exposes no
+prompt-cache accounting, so the extension reconstructs misses from the transcript
+and takes the TTL from `promptCache` in `models.json` — which no model currently
+declares, so `❄ cold` is what you will normally see. The footer re-renders every
+30 seconds (matching Claude Code's `refreshInterval`) and on model, thinking, and
+branch changes; the timer is cleared on shutdown. Every line is truncated to the
+terminal width. Adds `/custom-footer` and `/builtin-footer` to switch between this
+and Pi's own footer, which restores the cwd, usage/cost totals, and other
+extension statuses.
 
 **`dollar-skill.ts`** — types `$skill-name` and rewrites it to
 `/skill:skill-name` on submit, plus `$`-triggered autocomplete over installed
@@ -697,7 +711,7 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
   "toolStyle": "claudecode",
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
-    "low": "#4d788e",
+    "low": "dim",
     "stops": ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
     "bold": true, "sessionAccent": false, "intervalMs": 33
   },
@@ -716,10 +730,33 @@ working row animate the same band:
  cyan      blue      violet     pink      orange
 ```
 
-`low` is still the resting colour — the band is off the text for 12 of 28 frames, so painting the
-whole range all the time would leave most cells bright and lose the contrast against the prompt
-border. That is also why `mid`/`high` are absent from the config: the gradient painter never reads
-them (`src/indicator/frames.ts`), and leaving them in implies they still do something. `stops`
-also takes precedence over `sessionAccent`, which is pinned off here for the same reason.
+The band is deliberately fixed: it is the header's signature, and a rainbow does not exist in any
+theme. `low` is where the theme comes in. The band is off the text for 12 of 28 frames, so painting
+the whole range all the time would leave most cells bright and lose the contrast against the prompt
+border — those resting cells and the `⠋` glyph take `low`, and `low: "dim"` makes them a theme
+token. It used to be the literal `#4d788e`, which is the `cyan` value of the bundled cyan theme:
+the one colour here that did *not* follow the theme you were on, which is why the quiet part of the
+row looked cyan under a violet theme. That is also why `mid`/`high` are absent from the config: the
+gradient painter never reads them (`src/indicator/frames.ts`), and leaving them in implies they
+still do something. `stops` also takes precedence over `sessionAccent`, which is pinned off here
+for the same reason.
+
+To make the band follow the theme instead, set `"stops": "theme"`: it resolves, at frame-build
+time, to five lightness steps around the active theme's accent token, with the accent in the
+middle (`mix(accent,black,.42) → mix(accent,black,.20) → accent → mix(accent,white,.22) →
+mix(accent,white,.45)`). On the generated `system` theme that reads `#5f557c → #8276ab → #a393d6 →
+#b7abdf → #ccc4e8`, and `/theme` repaints the row with no config edit — the header keeps its
+rainbow either way. A 256-colour terminal reports an indexed accent with no RGB channels; the ramp
+then falls back to the theme's `text` token, and if that is indexed too the row falls back to the
+three tiers rather than inventing a colour.
 
 Drop `stops` (or set `[]`) to go back to the three tiers; `mid`/`high` only matter on that path.
+
+The same band paints every `Loader` label, not just `Working…`: `Compacting context…`,
+`Auto-compacting…`, `Summarizing branch…`, the retry countdown, the chat's bash
+`Running…` row, `BorderedLoader` dialogs, and extension loaders built on `Loader` such
+as pi-tui-kit's `TaskLoader`. They arrive through two seams — `setMessage` for later
+updates, the `Loader` constructor for the label a component is created with — and
+`src/indicator/gradient.ts` hooks both. They all compose the loader as a child and render
+it, so moving the text into frames never drops it. Each keeps its spinner glyph, which is
+why a row does not shift when the host swaps one status for another.
