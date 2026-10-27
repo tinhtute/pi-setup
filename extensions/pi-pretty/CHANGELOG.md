@@ -4,6 +4,14 @@
 
 ### Removed
 
+- **`session-color.ts`**: the per-session accent (172 LOC). It derived a hue from the
+session name on an OKLCH arc and tinted the mid/high tiers plus the dimmed spinner with
+it. Both gates were already closed in the shipped config — `sessionAccent: false` and
+`stops: "theme"`, which wins regardless — so nothing this repo renders changes. The
+`workingIndicator.sessionAccent` key is gone, `installWorkingIndicator` and
+`createThinkingLabelAnimator` no longer take a session name, and the
+`session_info_changed` handler that re-tinted on rename went with them. `hexToAnsiFg`
+moved to `indicator/palette.ts`, where the rest of the hex→ANSI resolution lives.
 - **FFF plumbing** (`@ff-labs/fff-node`): the bundled index service, the `@mention` autocomplete
 provider, the `/fff-health` and `/fff-rescan` commands, the `--pretty-fff-home-scan` /
 `--pretty-fff-root-scan` flags, the `PRETTY_FFF_*` env vars, the `fff` config block, the

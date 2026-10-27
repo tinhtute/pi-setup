@@ -128,10 +128,9 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 | `workingIndicator.low` | theme color name or `#hex` | — | `dim` |
 | `workingIndicator.mid` | theme color name or `#hex` | — | `muted` |
 | `workingIndicator.high` | theme color name or `#hex` | — | `accent` |
-| `workingIndicator.stops` | array of 2+ `#rrggbb` stops, or `"theme"`; each cell is interpolated through the band instead of snapping to `low`/`mid`/`high`. `"theme"` builds five steps around the active theme's `accent` at frame-build time, so `/theme` repaints the band. `low` stays the resting colour, and a configured list takes precedence over `sessionAccent`. Absent, empty, or single-stop falls back to the three tiers | — | unset (three tiers) |
+| `workingIndicator.stops` | array of 2+ `#rrggbb` stops, or `"theme"`; each cell is interpolated through the band instead of snapping to `low`/`mid`/`high`. `"theme"` builds five steps around the active theme's `accent` at frame-build time, so `/theme` repaints the band. `low` stays the resting colour. Absent, empty, or single-stop falls back to the three tiers | — | unset (three tiers) |
 | `workingIndicator.bold` | boolean | — | `true` |
 | `workingIndicator.hint` | boolean | — | deprecated (ignored) |
-| `workingIndicator.sessionAccent` | boolean | — | `true` |
 | `workingIndicator.intervalMs` | integer ms, clamped to `>= 33`; higher renders fewer frames | `PRETTY_WORKING_INTERVAL_MS` | `33` (30 fps) |
 | `thinkingIndicator.enabled` | boolean | `PRETTY_THINKING_INDICATOR` (`on`/`off`) | `true` |
 | `thinkingIndicator.intervalMs` | integer ms, clamped to `>= 33`; higher renders fewer frames | `PRETTY_THINKING_INTERVAL_MS` | `33` (30 fps) |
@@ -161,8 +160,7 @@ sweep per phrase (e.g. `["Working…", "Thinking…", "Pondering…"]`). The env
 into one of three tiers, so a wide band reads as three flat blocks with visible steps at the tier
 boundaries; with `stops` each neighbouring pair differs by a few RGB units instead. `low` is still
 the resting colour, so the text does not glare while the band is off-screen. A configured list
-wins over `sessionAccent`, and an absent/empty/single-stop list leaves the three tiers exactly as
-they were.
+and an absent/empty/single-stop list leaves the three tiers exactly as they were.
 
 The value can also be `"theme"`, which is what the shipped config uses: five steps around the
 active theme's `accent`, `mix(accent,black,.42) → mix(accent,black,.20) → accent →
@@ -174,17 +172,11 @@ the ramp then falls back to the theme's `text` token, and to the three tiers if 
 too. The ASCII banner is the one surface that stays a fixed rainbow: it is a signature, not a
 status, so `extensions/custom-banner.ts` keeps its own palette.
 
-When `sessionAccent` is on, the mid/high tiers and the spinner are tinted with a stable per-session
-accent color derived from the session name (an OKLCH port of
-[oh-my-pi](https://github.com/can1357/oh-my-pi)'s session accent) — different windows get different
-hues at uniform perceived brightness. Renaming the session re-tints the indicator live. Explicit
-`workingIndicator.mid`/`high` colors disable the tint.
-
 ### Thinking label (shimmer)
 
 With thinking blocks hidden (pi's `hideThinkingBlock` setting), the label shows elapsed reasoning
 time (`Thinking... 12s`) under the same shimmer: italic `thinkingText` base with the accent band
-(and the session accent tint) sweeping through it. Both the active and completed labels have one
+sweeping through it. Both the active and completed labels have one
 leading space for consistent output alignment. On the first text or tool delta it freezes as
 `Thought for 12s`. Durations below one second use milliseconds (`250ms` instead of `0s`); longer
 durations retain compact whole-second units (`12s`, `1m 05s`, `1h 02m 03s`).

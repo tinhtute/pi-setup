@@ -4,11 +4,25 @@
  */
 
 import { FG_BLUE, FG_DIM, FG_MUTED } from "../config.js";
-import { hexToAnsiFg } from "../session-color.js";
 import type { WorkingIndicatorPalette } from "./settings.js";
 import type { ResolvedPalette, ThemeAnsiSource } from "./types.js";
 
 export type { ResolvedPalette, ThemeAnsiSource };
+
+// ─── Hex ────────────────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): [number, number, number] | undefined {
+	const m = hex.trim().match(/^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
+	if (!m) return undefined;
+	return [Number.parseInt(m[1], 16), Number.parseInt(m[2], 16), Number.parseInt(m[3], 16)];
+}
+
+/** Truecolor ANSI foreground open sequence for a `#rrggbb` hex; empty when unparseable. */
+export function hexToAnsiFg(hex: string): string {
+	const rgb = hexToRgb(hex);
+	if (!rgb) return "";
+	return `\x1b[38;2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
+}
 
 // ─── Palette resolution ──────────────────────────────────────────────────────
 

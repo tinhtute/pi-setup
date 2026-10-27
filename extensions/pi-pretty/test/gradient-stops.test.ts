@@ -150,8 +150,7 @@ describe("buildWorkingFrames with stops", () => {
 
 /**
  * `stops` in the settings resolver. Absent (or unusable) means "no gradient": the
- * three tiers stay, which is what keeps `sessionAccent` meaningful. That is
- * deliberate — see the byte-identical-upstream test above.
+ * three tiers stay. That is deliberate — see the byte-identical-upstream test above.
  */
 describe("resolveWorkingIndicatorSettings stops", () => {
 	it("leaves stops undefined when the key is absent, so the three tiers stay", () => {

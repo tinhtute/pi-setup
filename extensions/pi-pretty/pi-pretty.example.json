@@ -26,7 +26,6 @@
 		"high": "accent",
 		"stops": "theme",
 		"bold": true,
-		"sessionAccent": true,
 		"intervalMs": 33
 	},
 	"thinkingIndicator": {

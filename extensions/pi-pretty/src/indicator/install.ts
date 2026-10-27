@@ -5,11 +5,10 @@
  * editor's top border, and older hosts get the widget fallback.
  */
 
-import { dimAccentHex, hexToAnsiFg, sessionAccentHex } from "../session-color.js";
 import { buildWorkingFrames } from "./frames.js";
 import { resolvePaletteAnsi } from "./palette.js";
-import { resolveStops } from "./theme-stops.js";
 import type { WorkingIndicatorSettings } from "./settings.js";
+import { resolveStops } from "./theme-stops.js";
 import type { WidgetTuiLike, WorkingThemeLike } from "./types.js";
 import { WorkingWidget } from "./widget.js";
 
@@ -69,7 +68,6 @@ export async function installWorkingIndicator(
 	ui: WorkingUiLike,
 	settings: WorkingIndicatorSettings,
 	deps?: { getKeybindings?: () => KeybindingsLike | undefined | Promise<KeybindingsLike | undefined> },
-	sessionName?: string,
 ): Promise<WorkingIndicatorController> {
 	const noopController: WorkingIndicatorController = {
 		start() {},
@@ -84,23 +82,12 @@ export async function installWorkingIndicator(
 	if (texts.length === 0) return noopController;
 	void deps; // Retained for compatibility; interrupt hints are no longer resolved here.
 
-	const ansiResolved = resolvePaletteAnsi(settings.palette, ui.theme);
-	let ansi = ansiResolved;
-	let spinnerColor: string | undefined;
-	if (settings.sessionAccent && sessionName && !settings.tiersCustomized && !settings.stops) {
-		const accentHex = sessionAccentHex(sessionName);
-		const accent = hexToAnsiFg(accentHex);
-		if (accent) {
-			ansi = { ...ansi, mid: accent, high: accent };
-			spinnerColor = hexToAnsiFg(dimAccentHex(accentHex));
-		}
-	}
+	const ansi = resolvePaletteAnsi(settings.palette, ui.theme);
 	const { frames, intervalMs } = buildWorkingFrames(texts, {
 		mode: settings.mode,
 		ansi,
 		stops: resolveStops(settings.stops, ui.theme),
 		bold: settings.bold,
-		spinnerColor,
 		intervalMs: settings.intervalMs,
 	});
 	if (frames.length === 0) return noopController;

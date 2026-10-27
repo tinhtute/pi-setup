@@ -15,7 +15,6 @@ import type {
 	ExtensionContext,
 	MessageEndEvent,
 	MessageUpdateEvent,
-	SessionInfoChangedEvent,
 } from "@earendil-works/pi-coding-agent";
 import * as hostSdk from "@earendil-works/pi-coding-agent";
 import { getDefaultAgentDir, loadConfig, type PrettyConfig } from "../config.js";
@@ -60,7 +59,6 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 	let thinkingInterval: ReturnType<typeof setInterval> | undefined;
 	let thinkingLastMessage: unknown;
 	let thinkingHiddenCheckedAt = 0;
-	let workingSessionName: string | undefined;
 	let workingStreaming = false;
 	let promptEditorInstalled = false;
 	let previousEditorFactory: EditorFactory;
@@ -115,22 +113,13 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		return !thinkingHidden();
 	};
 
-	const safeSessionName = (ctx: ExtensionContext): string | undefined => {
-		try {
-			return ctx.sessionManager?.getSessionName?.() ?? undefined;
-		} catch {
-			return undefined;
-		}
-	};
-
-	// (Re-)install the working indicator: new session, reload, or session rename
-	// (the accent tint tracks the name, omp-style). Preserves streaming state so a
-	// mid-stream rename does not drop the row.
+	// (Re-)install the working indicator: new session or reload. Preserves
+	// streaming state so a mid-stream reload does not drop the row.
 	const installIndicator = async (ctx: ExtensionContext): Promise<void> => {
 		workingController?.dispose();
 		workingController = undefined;
 		try {
-			const controller = await installWorkingIndicator(ctx.ui, workingSettings, undefined, workingSessionName);
+			const controller = await installWorkingIndicator(ctx.ui, workingSettings);
 			workingController = controller;
 			if (workingStreaming) controller.start();
 			// Noop install (disabled/blank) after a previous install → restore pi's loader.
@@ -173,18 +162,8 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 							(hostSdk as { AssistantMessageComponent?: unknown }).AssistantMessageComponent,
 					)
 				: undefined;
-			workingSessionName = safeSessionName(ctx);
 			await installIndicator(ctx);
 		}
-	});
-
-	// Re-apply the indicator when the session is (re)named so the accent tint
-	// tracks the name; omp derives the accent the same way.
-	pi.on("session_info_changed", async (event: SessionInfoChangedEvent, ctx: ExtensionContext) => {
-		if (ctx.mode !== "tui") return;
-		if (event.name === workingSessionName) return;
-		workingSessionName = event.name;
-		if (workingSettings.enabled) await installIndicator(ctx);
 	});
 
 	// Drive the working indicator with the streaming lifecycle (the host row is hidden until agent_start).
@@ -256,7 +235,7 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		try {
 			thinkingHiddenCheckedAt = Date.now();
 			if (!thinkingHidden()) return; // thinking visible: no label writes at all
-			const animator = createThinkingLabelAnimator(ctx.ui, workingSettings, workingSessionName, thinkingSettings);
+			const animator = createThinkingLabelAnimator(ctx.ui, workingSettings, thinkingSettings);
 			const activeTs = messageTimestamp(thinkingLastMessage);
 			// Same message thinking again (interleaved runs): resume its total.
 			const resumeMs = activeTs !== undefined ? (thinkingElapsedMs.get(activeTs) ?? 0) : 0;

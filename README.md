@@ -469,7 +469,7 @@ otherwise prints a diff — the live file is the one a person tunes:
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim", "stops": "theme", "bold": true,
-    "sessionAccent": false, "intervalMs": 33
+    "intervalMs": 33
   },
   "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
 }
@@ -712,7 +712,7 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim",
     "stops": "theme",
-    "bold": true, "sessionAccent": false, "intervalMs": 33
+    "bold": true, "intervalMs": 33
   },
   "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
 }
@@ -740,8 +740,7 @@ contrast against the prompt border — those resting cells and the `⠋` glyph t
 `low: "dim"` makes them a theme token too. It used to be the literal `#4d788e`, the `cyan` value of
 the bundled cyan theme. That is also why `mid`/`high` are absent from the config: the gradient
 painter never reads them (`src/indicator/frames.ts`), and leaving them in implies they still do
-something. `stops` also takes precedence over `sessionAccent`, which is pinned off here for the
-same reason.
+something. `stops` is what makes the band follow the theme instead of three flat tiers.
 
 The ASCII banner is the exception: `extensions/custom-banner.ts` keeps its own fixed rainbow
 (`#22d3ee → #60a5fa → #a78bfa → #f472b6 → #fb923c`, cyan through orange). It is a signature rather
