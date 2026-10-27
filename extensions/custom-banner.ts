@@ -7,6 +7,11 @@ const BANNER = [
 	"░▒█▒░█░█▒▀█▒█▒█░▒█▒░▀▄█░▒█▒░█▄▄▒░",
 ];
 
+/**
+ * The header's own rainbow, fixed on purpose: the ASCII art is a signature, not a
+ * status surface, so it stays cyan → orange whatever the theme is. The working row
+ * is the theme-following surface — see `extensions/pi-pretty/` (`workingIndicator.stops`).
+ */
 const PALETTE = ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"].map(parseColor);
 
 function gradient(text: string, theme: Theme): string {

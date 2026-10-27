@@ -4,7 +4,7 @@
     "enabled": true,
     "text": ["Working…"],
     "mode": "shimmer",
-    "low": "#4d788e",
+    "low": "dim",
     "stops": ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
     "bold": true,
     "sessionAccent": false,

@@ -1,6 +1,6 @@
 {
   "lastChangelogVersion": "1.4.0",
-  "theme": "cyan",
+  "theme": "system",
   "tuiMode": "fullscreen",
   "hideThinkingBlock": true,
   "markdown": {
