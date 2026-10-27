@@ -399,11 +399,39 @@ try {
 			luminance(selFg) > luminance(railFg2),
 			"theme " + file + ": the selected option must be brighter than the rail",
 		);
+		// The accent is the emphasis register, with one exception: a theme whose accent is
+		// darker than its own dim (the bundled cyan) would make the selection read as
+		// disabled, so `border` -- the bright frame colour in exactly those themes --
+		// takes over there.
+		const accentOf = sgrOf(themed.fg("accent", "x"))[0] ?? "";
+		const borderOf = sgrOf(themed.fg("border", "x"))[0] ?? "";
+		const hasRgb = (sgr) => /38;2;\d+;\d+;\d+/.test(sgr);
+		const darkerAccent = hasRgb(accentOf) && hasRgb(railFg2) && luminance(accentOf) < luminance(railFg2);
+		const expectedEmphasis = darkerAccent ? borderOf : accentOf;
+		assert.equal(
+			selFg,
+			expectedEmphasis,
+			"theme " + file + ": the selection uses " + (darkerAccent ? "border (accent is darker than dim)" : "the accent"),
+		);
+		assert.equal(
+			sample(at("Bash command"), "Bash command"),
+			expectedEmphasis,
+			"theme " + file + ": the title shares the emphasis colour",
+		);
 		assert.ok(
 			luminance(cmdFg) > luminance(railFg2),
 			"theme " + file + ": the command must be brighter than the rail",
 		);
 	}
+
+	// Emphasis is the theme's accent -- what the operator reads as the theme's primary
+	// colour -- so `/theme` repaints the title and the selection. `border` used to own
+	// this register, which on the generated system theme means a blue-cyan title
+	// (#56a2c7) whatever accent the theme declares.
+	const accentSgr = sgrOf(getThemeByName("dark").fg("accent", "x"))[0] ?? "";
+	assert.ok(accentSgr, "the default theme resolves an accent colour");
+	assert.equal(yesFg, accentSgr, "the selected option is the theme's accent, not the border token");
+	assert.equal(titleFg, accentSgr, "the title is the theme's accent");
 
 	// The question must be the brightest/emphasised prose, not the muted meta colour.
 	const metaLine = lines.findIndex((l) => l.includes("Hook PreToolUse") || l.includes("confirm-guard pattern"));

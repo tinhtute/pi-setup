@@ -21,6 +21,11 @@
 //   unselected option         #d8d8d8   text
 //   hint letters in options   #666666   dim
 //
+// The emphasis colour is the theme's accent, i.e. the colour the operator reads as the
+// theme's primary colour, so `/theme` repaints the title and the selection. `border` used
+// to own that register, which on the generated system theme means a blue-cyan title
+// (#56a2c7) whatever accent the theme declares. See `emphasis()` for the one exception.
+//
 // So the visual grammar is: dim rail, accent title, muted meta, bright script,
 // accent selection. Four registers, no background fills, no frame.
 //
@@ -62,6 +67,21 @@ function contentWidth(width: number): number {
 function visibleWidth(text: string): number {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching SGR on purpose
 	return [...text.replace(/\x1b\[[0-9;]*m/g, "")].length;
+}
+
+/**
+ * WCAG relative luminance of a token, or `NaN` when the token is not RGB -- an indexed
+ * 256-colour accent carries `kind` but no channels, and there is nothing to compare
+ * then. Only used to decide whether an accent can carry emphasis over the rail.
+ */
+function luminance(color: unknown): number {
+	const { r, g, b } = (color ?? {}) as { r?: number; g?: number; b?: number };
+	if (typeof r !== "number" || typeof g !== "number" || typeof b !== "number") return Number.NaN;
+	const channel = (value: number): number => {
+		const n = value / 255;
+		return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
+	};
+	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
 /** Cut a styled line to `limit` visible columns, marking the cut with an ellipsis. */
@@ -121,17 +141,33 @@ export class ConfirmBox implements Component {
 		return this.row("", width);
 	}
 
+	/**
+	 * The emphasis register: the theme's accent, which is the colour the operator reads as
+	 * the theme's primary colour. One exception keeps it legible -- a theme whose accent is
+	 * darker than its own dim (the bundled `cyan` theme ships #4d788e against #7e888e)
+	 * would make the title and the selection look disabled, so `border`, the bright frame
+	 * colour in exactly those themes, takes over. An indexed accent has no channels to
+	 * compare and is simply used.
+	 */
+	private emphasis(text: string): string {
+		const { theme } = this;
+		const accent = theme.colors?.accent;
+		const dim = theme.colors?.dim;
+		const accentLuminance = luminance(accent);
+		const dimLuminance = luminance(dim);
+		if (Number.isNaN(accentLuminance) || Number.isNaN(dimLuminance) || accentLuminance >= dimLuminance) {
+			return theme.fg("accent", text);
+		}
+		return theme.fg("border", text);
+	}
+
 	render(width: number): string[] {
 		const { theme } = this;
 		const rows: string[] = [];
 		const push = (content = "") => rows.push(this.row(content, width));
 
-		// Title: the emphasis token, like Claude Code's "Bash command". Not `accent`:
-		// in some themes (the user's `cyan` among them) accent is *darker* than dim, so
-		// using it here would make the title -- and the selected option -- read as less
-		// important than the hints. `border` is the token whose luminance matches what
-		// Claude Code uses for these elements (#6c9ccc, luminance 0.31).
-		push(`${theme.fg("border", theme.bold("Bash command"))}`);
+		// Title: the emphasis token, like Claude Code's "Bash command".
+		push(this.emphasis(theme.bold("Bash command")));
 		push();
 
 		// Why it appeared, muted — the same weight as Claude Code's description.
@@ -164,9 +200,9 @@ export class ConfirmBox implements Component {
 		const limit = contentWidth(width);
 		OPTIONS.forEach((option, index) => {
 			const focused = index === this.selected;
-			const pointer = focused ? theme.fg("border", ">") : " ";
+			const pointer = focused ? this.emphasis(">") : " ";
 			const number = theme.fg("dim", `${index + 1}.`);
-			const label = focused ? theme.fg("border", option.label) : theme.fg("text", option.label);
+			const label = focused ? this.emphasis(option.label) : theme.fg("text", option.label);
 			const line = `${pointer} ${number} ${label}`;
 			const hint = theme.fg("dim", option.hint);
 			const gap = Math.max(1, limit - visibleWidth(line) - visibleWidth(hint));
