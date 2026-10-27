@@ -642,7 +642,9 @@ than guessed (OCR plus pixel sampling of a screenshot): a continuous dim rail
 instead of a box, an emphasis-coloured title, muted metadata, the command as
 plain bright text, and the selection in the emphasis colour. Five registers, no
 frames, no background fills — the command has to be the most legible thing in the
-dialog, because it is the thing you are agreeing to.
+dialog, because it is the thing you are agreeing to. The dialog takes the editor
+slot and fills it: rail, two-column gutter, then the text, so it looks the same
+on an 80-column terminal as on a 200-column one.
 
 **Position matters as much as the shape.** The dialog is not an overlay: an
 overlay floats in the middle of the screen, covering the conversation and
@@ -712,7 +714,7 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim",
-    "stops": ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
+    "stops": "theme",
     "bold": true, "sessionAccent": false, "intervalMs": 33
   },
   "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
@@ -721,34 +723,37 @@ Colours now come from `~/.pi/agent/pi-pretty.json` — the same file `install.sh
 
 Five stops, not three tiers. pi-pretty quantises a cell into `low`/`mid`/`high` by default, which
 makes a wide band read as three flat blocks with visible steps where the tiers meet. With `stops`
-the same intensity curve is interpolated per cell, so neighbours differ by a few RGB units. The
-five colours are the banner's own palette (`extensions/custom-banner.ts`), so the header and the
-working row animate the same band:
+the same intensity curve is interpolated per cell, so neighbours differ by a few RGB units.
+
+`stops: "theme"` means those five stops are the theme's own accent, stepped in lightness with the
+accent in the middle:
 
 ```text
-#22d3ee → #60a5fa → #a78bfa → #f472b6 → #fb923c
- cyan      blue      violet     pink      orange
+mix(accent,black,.42) → mix(accent,black,.20) → accent → mix(accent,white,.22) → mix(accent,white,.45)
 ```
 
-The band is deliberately fixed: it is the header's signature, and a rainbow does not exist in any
-theme. `low` is where the theme comes in. The band is off the text for 12 of 28 frames, so painting
-the whole range all the time would leave most cells bright and lose the contrast against the prompt
-border — those resting cells and the `⠋` glyph take `low`, and `low: "dim"` makes them a theme
-token. It used to be the literal `#4d788e`, which is the `cyan` value of the bundled cyan theme:
-the one colour here that did *not* follow the theme you were on, which is why the quiet part of the
-row looked cyan under a violet theme. That is also why `mid`/`high` are absent from the config: the
-gradient painter never reads them (`src/indicator/frames.ts`), and leaving them in implies they
-still do something. `stops` also takes precedence over `sessionAccent`, which is pinned off here
-for the same reason.
+On the generated `system` theme (accent `#a393d6`) that reads `#5f557c → #8276ab → #a393d6 → #b7abdf
+→ #ccc4e8`, and `/theme` repaints the working row, the loader labels, and the hidden-thinking row
+with no config edit. It used to be a fixed rainbow, which painted the same five colours under every
+theme — including the cyan one, which is why the band looked cyan beside a violet prompt.
 
-To make the band follow the theme instead, set `"stops": "theme"`: it resolves, at frame-build
-time, to five lightness steps around the active theme's accent token, with the accent in the
-middle (`mix(accent,black,.42) → mix(accent,black,.20) → accent → mix(accent,white,.22) →
-mix(accent,white,.45)`). On the generated `system` theme that reads `#5f557c → #8276ab → #a393d6 →
-#b7abdf → #ccc4e8`, and `/theme` repaints the row with no config edit — the header keeps its
-rainbow either way. A 256-colour terminal reports an indexed accent with no RGB channels; the ramp
-then falls back to the theme's `text` token, and if that is indexed too the row falls back to the
-three tiers rather than inventing a colour.
+`low` is the resting colour, and it is the other half of that fix. The band is off the text for 12
+of 28 frames, so painting the whole range all the time would leave most cells bright and lose the
+contrast against the prompt border — those resting cells and the `⠋` glyph take `low`, and
+`low: "dim"` makes them a theme token too. It used to be the literal `#4d788e`, the `cyan` value of
+the bundled cyan theme. That is also why `mid`/`high` are absent from the config: the gradient
+painter never reads them (`src/indicator/frames.ts`), and leaving them in implies they still do
+something. `stops` also takes precedence over `sessionAccent`, which is pinned off here for the
+same reason.
+
+The ASCII banner is the exception: `extensions/custom-banner.ts` keeps its own fixed rainbow
+(`#22d3ee → #60a5fa → #a78bfa → #f472b6 → #fb923c`, cyan through orange). It is a signature rather
+than a status surface, so it does not follow the theme.
+
+A 256-colour terminal reports an indexed accent with no RGB channels; the ramp then falls back to
+the theme's `text` token, and if that is indexed too the row falls back to the three tiers rather
+than inventing a colour. An explicit `#rrggbb` list still works and pins the band whatever the
+theme is.
 
 Drop `stops` (or set `[]`) to go back to the three tiers; `mid`/`high` only matter on that path.
 
