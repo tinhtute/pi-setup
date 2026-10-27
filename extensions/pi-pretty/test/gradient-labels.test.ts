@@ -5,10 +5,11 @@ import { resolveWorkingIndicatorSettings, WORKING_INDICATOR_DEFAULTS } from "../
 
 /**
  * Host labels (compacting / retry / summarize / the plain Working row the host
- * restores after a reload) go through Loader.setMessage, not through
- * installWorkingIndicator. These tests assert that seam actually intercepts them:
- * a Loader subclass must end up holding pre-baked gradient frames instead of one
- * flat-coloured string.
+ * restores after a reload) reach pi-pretty through two seams, not through
+ * installWorkingIndicator: `Loader.setMessage` for every later update, and the
+ * `Loader` constructor for the label a component is created with. These tests
+ * assert both: the loader must end up holding pre-baked gradient frames instead
+ * of one flat-coloured string, whether or not it is a status indicator.
  */
 
 const SGR_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
@@ -28,6 +29,30 @@ function hostLoader(message: string): Loader {
 	);
 }
 
+/**
+ * The host's `StatusIndicator` is a Loader subclass that (a) passes its first label
+ * to the constructor instead of calling setMessage and (b) is the only kind of
+ * Loader with `renderInBorder`, which is how pi embeds it in the editor border.
+ */
+class HostStatusIndicator extends Loader {
+	readonly kind: string;
+
+	constructor(message: string) {
+		super(
+			tui,
+			(s) => s,
+			(s) => s,
+			message,
+		);
+		this.kind = "compaction";
+	}
+
+	renderInBorder(width: number): string {
+		const line = super.render(width + 2)[1] ?? "";
+		return line.startsWith(" ") ? line.slice(1).trimEnd() : line.trimEnd();
+	}
+}
+
 const settings = resolveWorkingIndicatorSettings(
 	{ enabled: true, text: "Working…", mode: "shimmer", low: "#102030", mid: "#405060", high: "#708090" },
 	{},
@@ -45,21 +70,47 @@ describe("gradient labels", () => {
 	it("turns a host label into animated frames instead of leaving it flat", () => {
 		installGradientLabels({ settings, getTheme: () => undefined });
 
-		const loader = hostLoader("Compacting context... (esc to cancel)");
-		const before = loader.render(120).join("\n");
-		// Baseline: the host's own rendering carries no per-cell colour.
-		expect(stripAnsi(before)).toContain("Compacting context");
+		// The label the host passes to the constructor — Compacting / Auto-compacting /
+		// Summarizing / the first Retrying frame all arrive this way.
+		const loader = new HostStatusIndicator("Compacting context... (esc to cancel)");
+		const first = loader.renderInBorder(200);
+		expect(stripAnsi(first)).toContain("Compacting context");
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: asserting on SGR output is the point
-		expect(before).not.toMatch(/\x1b\[38;2;/);
+		expect(first).toMatch(/\x1b\[38;2;/);
 
 		// The host later updates the message (retry countdown does exactly this).
 		loader.setMessage("Retrying (1/3) in 5s... (esc to cancel)");
 
-		const rendered = loader.render(120).join("\n");
-		// Text survives, but now wrapped in per-tier ANSI rather than one flat string.
+		const rendered = loader.renderInBorder(200);
+		// Text survives, but now wrapped in per-cell ANSI rather than one flat string.
 		expect(stripAnsi(rendered)).toContain("Retrying (1/3) in 5s...");
 		// biome-ignore lint/suspicious/noControlCharactersInRegex: asserting on SGR output is the point
 		expect(rendered).toMatch(/\x1b\[38;2;/);
+		loader.stop();
+	});
+
+	it("keeps the spinner column, so the status row does not shift", () => {
+		installGradientLabels({ settings, getTheme: () => undefined });
+
+		const row = stripAnsi(new HostStatusIndicator("Compacting context... (esc to cancel)").renderInBorder(200));
+		// Same `⠋ text` shape the Working row renders; the frames are verbatim, so the
+		// host's own glyph is gone and ours has to stand in for it.
+		expect(row).toBe("⠋ Compacting context... (esc to cancel)");
+	});
+
+	it("converts a plain Loader too — bash rows, dialogs, extension loaders", () => {
+		installGradientLabels({ settings, getTheme: () => undefined });
+
+		// pi's bash `Running...` row, `BorderedLoader` dialogs, and pi-tui-kit's
+		// `TaskLoader` all pass their label to the constructor and have no
+		// `renderInBorder`. They get the same treatment: the row keeps its glyph.
+		const bash = hostLoader("Running... (esc to cancel)");
+		const row = bash.render(200).join("\n");
+		expect(stripAnsi(row)).toContain("Running... (esc to cancel)");
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: asserting on SGR output is the point
+		expect(row).toMatch(/\x1b\[38;2;/);
+		expect(stripAnsi(row).trimEnd().endsWith("⠋ Running... (esc to cancel)")).toBe(true);
+		bash.stop();
 	});
 
 	it("produces more than one distinct frame so the label actually moves", () => {
@@ -101,11 +152,13 @@ describe("gradient labels", () => {
 
 	it("restores the host method on uninstall", () => {
 		const pristine = Loader.prototype.setMessage;
+		const pristineStart = Loader.prototype.start;
 		installGradientLabels({ settings, getTheme: () => undefined });
 		expect(Loader.prototype.setMessage).not.toBe(pristine);
 
 		uninstallGradientLabels();
 		expect(Loader.prototype.setMessage).toBe(pristine);
+		expect(Loader.prototype.start).toBe(pristineStart);
 	});
 
 	it("sticks to one flat message when the label cannot be framed", () => {

@@ -10,6 +10,7 @@ import { keyText } from "@earendil-works/pi-coding-agent";
 import { hexToAnsiFg, sessionAccentHex } from "../session-color.js";
 import { buildWorkingFrames } from "./frames.js";
 import { colorToAnsi, FG_THINKING_FALLBACK, resolvePaletteAnsi } from "./palette.js";
+import { resolveStops } from "./theme-stops.js";
 import type { WorkingIndicatorSettings } from "./settings.js";
 import type { ThinkingIndicatorSettings } from "./thinking-settings.js";
 import type { ResolvedPalette, ThinkingUiLike } from "./types.js";
@@ -235,7 +236,7 @@ export function createThinkingLabelAnimator(
 		return buildWorkingFrames([text], {
 			mode: workSettings.mode,
 			ansi,
-			stops: workSettings.stops,
+			stops: resolveStops(workSettings.stops, ui.theme),
 			bold: workSettings.bold,
 			spinner: false,
 			italic: true,

@@ -8,6 +8,7 @@
 import { dimAccentHex, hexToAnsiFg, sessionAccentHex } from "../session-color.js";
 import { buildWorkingFrames } from "./frames.js";
 import { resolvePaletteAnsi } from "./palette.js";
+import { resolveStops } from "./theme-stops.js";
 import type { WorkingIndicatorSettings } from "./settings.js";
 import type { WidgetTuiLike, WorkingThemeLike } from "./types.js";
 import { WorkingWidget } from "./widget.js";
@@ -97,7 +98,7 @@ export async function installWorkingIndicator(
 	const { frames, intervalMs } = buildWorkingFrames(texts, {
 		mode: settings.mode,
 		ansi,
-		stops: settings.stops,
+		stops: resolveStops(settings.stops, ui.theme),
 		bold: settings.bold,
 		spinnerColor,
 		intervalMs: settings.intervalMs,
