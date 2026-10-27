@@ -78,9 +78,9 @@ describe("find over the SDK", () => {
 		const result = await run(tools.get("find") as Registered);
 
 		expect(result.details.text).toBe("a.ts");
-		// The parser splits notices on sentence boundaries, so one SDK sentence
-		// arrives as two entries. Pinned as-is: it is display-only text.
-		expect(result.details.notices).toEqual(["100 entries limit reached", "Use limit=200 for more"]);
+		// One bracketed block is one notice: the SDK's sentence stays intact instead
+		// of being cut at ". " and re-joined by the renderer.
+		expect(result.details.notices).toEqual(["100 entries limit reached. Use limit=200 for more"]);
 	});
 });
 

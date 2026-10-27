@@ -99,6 +99,7 @@ Round 1 — **done**, shipped in [#20](https://github.com/tinhtute/pi-setup/pull
 - [x] `extensions/pretty-border.ts` (206 + 97 test) — it only re-boxed the prompt B5 unboxed
 - [x] `config/pi-pretty.json`, `pi-pretty.example.json`, extension README, CHANGELOG, root README
 - [x] regression hole: `find`/`grep` lost their only test with `fff-integration`; `test/find-grep-sdk.test.ts` (7 cases) now pins the SDK passthrough, the `findResult`/`grepResult` details shape, the empty-answer normalisation, and CRLF handling
+- [x] bug the new tests caught: `normalizeSdkFindOutput` split the SDK's bracketed notice on `. `, so `[100 entries limit reached. Use limit=200 for more]` arrived as two entries and the renderer re-joined them — correct for that string only. One block is now one notice
 
 Result: 6 593 → 4 621 LOC, 384 → 295 tests (26 → 24 files), −3 816 lines net.
 
