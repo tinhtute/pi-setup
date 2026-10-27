@@ -116,14 +116,14 @@ returns nothing before the added file; run that after any future slice delete.
 | Priority | Slice | LOC removable | Tests removable | What is lost | Risk |
 |---|---|---|---|---|---|
 | 1 | B4 `session-color.ts` | 172 | `session-color` | per-session tint: `sessionAccent`, the dimmed spinner variant, and the thinking-label hue | **already dead on this machine**: `install.ts:90` and `thinking-label.ts:217` both require `sessionAccent && !tiersCustomized && !stops`, and the shipped config sets `sessionAccent: false` *and* `stops: "theme"`, which wins regardless. Purge = 4 source call sites + `settings.sessionAccent` |
-| 2 | C1 `kitt` + `static` modes, keep `shimmer` | ~100–150 (estimate, inside `indicator/frames.ts` + `settings.ts`) | a few cases | two alternative animations | **check the config first**: shipped `mode` is `shimmer`, so the other two are dead weight here |
+| ~~2~~ | ~~C1 `kitt` + `static` modes~~ — **decided: keep** (2026-10-27) | 0 | 0 | nothing | Not dead weight: the three modes are the feature. Dead *on this machine* is not the same as dead in the repo, and this repo is a template someone else copies. Cutting ~125 lines out of two shared `switch` bodies costs more review attention than it returns. |
 | 3 | A3 `tools/ls.ts` | 129 | `ls-tree-icons` | the `ls` override; `config/icons.ts` stays, it is shared | **check the config first**: `DEFAULT_DISABLED_TOOLS` has `ls` and the shipped config does not re-enable it |
 | 4 | B2 `user-rail.ts` | 80 | `user-rail` | the one-cell rail; user messages go back to the host's rendering | shipped config has no `userRail` key, so nothing changes visually here |
 | 5 | B3 `prompt-editor.ts` | 111 | `prompt-editor` | the boxed prompt around live input | visible on every keystroke — decide, do not guess |
 
-Slices 1–4 remove roughly **500 LOC and 4 test files** without changing anything
-this machine renders today: each is gated off by a value in the shipped config.
-Slice 5 is the only one with a visible cost.
+Slices 1, 3 and 4 remove roughly **380 LOC and 3 test files** without changing
+anything this machine renders today: each is gated off by a value in the shipped
+config. Slice 5 is the only one with a visible cost.
 
 ### Method note from round 1
 
@@ -141,7 +141,7 @@ or not — that check is the whole difference between a trim and a regression.
 ## What would change this answer
 
 - `sessionAccent: true` gets turned on → slice 1 is a feature, not dead weight.
-- `workingIndicator.mode` becomes `kitt` or `static` → keep that mode, cut `shimmer` instead.
+- `workingIndicator.mode` stays configurable on purpose (decided 2026-10-27: `kitt` and `static` stay), so do not re-propose C1 unless the modes stop being reachable from config.
 - `ls` gets enabled (it is one config key away) → slice 3 is a feature.
 - A future Pi version ships its own shimmer / `Loader` styling → C3 becomes duplicate work and should be re-evaluated before C1.
 
