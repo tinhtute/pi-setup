@@ -935,7 +935,7 @@ describe("createThinkingLabelAnimator", () => {
 		const { createThinkingLabelAnimator, WORKING_INDICATOR_DEFAULTS } =
 			await freshModule<typeof import("../src/working-indicator.js")>("../src/working-indicator.js");
 		const { ui, labels } = makeUi();
-		const animator = createThinkingLabelAnimator(ui, WORKING_INDICATOR_DEFAULTS, undefined);
+		const animator = createThinkingLabelAnimator(ui, WORKING_INDICATOR_DEFAULTS);
 		expect(animator.frames.length).toBe(31); // "Thinking..." = 11 cps + 20 padding
 		animator.tick();
 		for (let i = 0; i < 10; i++) animator.tick();
@@ -963,31 +963,11 @@ describe("createThinkingLabelAnimator", () => {
 		expect(labels.at(-1)).toBe(" Thought for 7s");
 	});
 
-	it("tints mid/high tiers with the session accent", async () => {
-		const { createThinkingLabelAnimator, WORKING_INDICATOR_DEFAULTS } =
-			await freshModule<typeof import("../src/working-indicator.js")>("../src/working-indicator.js");
-		const { sessionAccentHex } = await freshModule<typeof import("../src/session-color.js")>("../src/session-color.js");
-		const { ui, labels } = makeUi();
-		const animator = createThinkingLabelAnimator(ui, WORKING_INDICATOR_DEFAULTS, "alpha");
-		animator.tick();
-		const accent = sessionAccentHex("alpha");
-		const accentAnsi = `\x1b[38;2;${Number.parseInt(accent.slice(1, 3), 16)};${Number.parseInt(
-			accent.slice(3, 5),
-			16,
-		)};${Number.parseInt(accent.slice(5, 7), 16)}m`;
-		// 11 ticks → frame 10 (band center on text): high run "Thi", mid run "nk"
-		for (let i = 0; i < 11; i++) animator.tick();
-		const frame10 = labels[10];
-		expect(frame10.includes(`\x1b[1m${accentAnsi}Thi`)).toBe(true);
-		expect(frame10.includes(`${accentAnsi}nk`)).toBe(true);
-		expect(frame10.includes(M)).toBe(false);
-	});
-
 	it("is a no-op when disabled", async () => {
 		const { createThinkingLabelAnimator, WORKING_INDICATOR_DEFAULTS } =
 			await freshModule<typeof import("../src/working-indicator.js")>("../src/working-indicator.js");
 		const { ui, labels } = makeUi();
-		const animator = createThinkingLabelAnimator(ui, WORKING_INDICATOR_DEFAULTS, undefined, {
+		const animator = createThinkingLabelAnimator(ui, WORKING_INDICATOR_DEFAULTS, {
 			enabled: false,
 		});
 		animator.tick();

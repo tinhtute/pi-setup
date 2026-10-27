@@ -6,7 +6,6 @@
     "low": "dim",
     "stops": "theme",
     "bold": true,
-    "sessionAccent": false,
     "intervalMs": 33
   },
   "thinkingIndicator": {

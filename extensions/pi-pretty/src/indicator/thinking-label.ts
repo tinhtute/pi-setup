@@ -6,7 +6,6 @@
  * component so each row keeps its own accumulated duration.
  */
 
-import { hexToAnsiFg, sessionAccentHex } from "../session-color.js";
 import { buildWorkingFrames } from "./frames.js";
 import { colorToAnsi, FG_THINKING_FALLBACK, resolvePaletteAnsi } from "./palette.js";
 import type { WorkingIndicatorSettings } from "./settings.js";
@@ -191,13 +190,13 @@ export function thinkingBlockActive(message: unknown): boolean {
  * message's last block is thinking. The elapsed label is rebuilt when its
  * displayed duration changes; the shimmer frame still advances every tick.
  *
- * Tiers: low = theme `thinkingText` (pi's own label look), mid/high = session
- * accent when enabled; every frame is italic like pi's label; no spinner.
+ * Tiers: low = theme `thinkingText` (pi's own label look), mid/high from the
+ * working palette or the configured `stops` ramp; every frame is italic like
+ * pi's label; no spinner.
  */
 export function createThinkingLabelAnimator(
 	ui: ThinkingUiLike,
 	workSettings: WorkingIndicatorSettings,
-	sessionName?: string,
 	thinking?: ThinkingIndicatorSettings,
 ): ThinkingLabelAnimator {
 	const noop: ThinkingLabelAnimator = {
@@ -210,14 +209,10 @@ export function createThinkingLabelAnimator(
 	if (typeof ui.setHiddenThinkingLabel !== "function") return noop;
 
 	const ansiResolved = resolvePaletteAnsi(workSettings.palette, ui.theme);
-	let ansi: ResolvedPalette = {
+	const ansi: ResolvedPalette = {
 		...ansiResolved,
 		low: colorToAnsi("thinkingText", ui.theme, FG_THINKING_FALLBACK),
 	};
-	if (workSettings.sessionAccent && sessionName && !workSettings.tiersCustomized && !workSettings.stops) {
-		const accent = hexToAnsiFg(sessionAccentHex(sessionName));
-		if (accent) ansi = { ...ansi, mid: accent, high: accent };
-	}
 	const buildLabelFrames = (label: string): string[] => {
 		const padded = padThinkingLabel(label);
 		const text = padded.trimStart();

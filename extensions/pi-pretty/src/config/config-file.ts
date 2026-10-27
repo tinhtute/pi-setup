@@ -24,8 +24,6 @@ export interface WorkingIndicatorConfig {
 	bold?: boolean;
 	/** @deprecated Retained for config compatibility; the working row no longer renders this hint. */
 	hint?: boolean;
-	/** Tint the indicator with a stable per-session accent color. */
-	sessionAccent?: boolean;
 	/** Frame advance interval in ms (>= 33). Higher = cheaper frames while the agent works. */
 	intervalMs?: number;
 }
@@ -126,7 +124,6 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 			}
 			if (typeof src.bold === "boolean") wi.bold = src.bold;
 			if (typeof src.hint === "boolean") wi.hint = src.hint;
-			if (typeof src.sessionAccent === "boolean") wi.sessionAccent = src.sessionAccent;
 			if (typeof src.intervalMs === "number" && Number.isFinite(src.intervalMs) && src.intervalMs >= 33)
 				wi.intervalMs = src.intervalMs;
 			if (Object.keys(wi).length > 0) config.workingIndicator = wi;

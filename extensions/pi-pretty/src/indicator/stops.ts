@@ -9,8 +9,8 @@
  *
  * The stop list is configuration, not a built-in: `workingIndicator.stops` in
  * `pi-pretty.json` carries it, and its absence means "keep the three tiers". A
- * default baked in here would silently override `sessionAccent` for every config
- * that predates the key.
+ * default baked in here would silently override the `low`/`mid`/`high` tiers for
+ * every config that predates the key.
  *
  * Colours go through pi-tui's own colour maths (parseColor/mixColors/colorToRgb),
  * which is what the custom banner uses, so the banner and these labels share one
