@@ -7,7 +7,7 @@
  *
  * Layout:
  *   config/ansi.ts         ANSI palette, writable bindings, background resolution
- *   config/config-file.ts  schema, loadConfig, tool-set and FFF resolvers
+ *   config/config-file.ts  schema, loadConfig, tool-set resolvers
  *   config/icons.ts        Nerd Font file/dir icons
  *   config/lang.ts         extension -> Shiki language
  *   config/terminal.ts     clamped terminal width

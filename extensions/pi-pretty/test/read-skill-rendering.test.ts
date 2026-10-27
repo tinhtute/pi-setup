@@ -67,7 +67,7 @@ function loadReadTool(content: string, renderContent?: (...args: any[]) => Promi
 		execute: async () => ({ content: [{ type: "text", text: content }] satisfies ToolContent[], details: {} }),
 	};
 
-	registerReadTool(pi, process.cwd(), undefined, sdkTool, MockText, renderContent);
+	registerReadTool(pi, process.cwd(), sdkTool, MockText, renderContent);
 	if (!tool) throw new Error("read tool was not registered");
 	return tool;
 }

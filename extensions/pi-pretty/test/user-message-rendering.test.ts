@@ -16,7 +16,6 @@ async function loadMarkdownTransformer(): Promise<MarkdownTransformer> {
 
 	await piPrettyExtension(pi as never, {
 		sdk: {},
-		fffModule: undefined,
 	});
 
 	if (!transformer) throw new Error("pi-pretty did not register a Markdown transformer");

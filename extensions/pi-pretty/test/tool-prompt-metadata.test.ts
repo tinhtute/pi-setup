@@ -22,7 +22,6 @@ describe("host prompt metadata passthrough", () => {
 		registerReadTool(
 			pi,
 			process.cwd(),
-			undefined,
 			{
 				description: "read fixture",
 				parameters: { type: "object", properties: {} },
@@ -51,7 +50,6 @@ describe("host prompt metadata passthrough", () => {
 		registerReadTool(
 			pi,
 			process.cwd(),
-			undefined,
 			{
 				parameters: { type: "object", properties: {} },
 				outputSchema,
@@ -74,7 +72,6 @@ describe("host prompt metadata passthrough", () => {
 		registerLsTool(
 			pi,
 			process.cwd(),
-			undefined,
 			{
 				description: "ls fixture",
 				parameters: { type: "object", properties: {} },

@@ -11,7 +11,7 @@
 //
 // The extensions are TypeScript and cannot be imported here, so this pins the
 // behaviour-carrying lines and mirrors the ramp against the real pi-tui helpers —
-// same approach as tests/test-pretty-border.mjs.
+// same approach as tests/test-confirm-guard.mjs.
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
