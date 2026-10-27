@@ -36,7 +36,7 @@ const never = async () => {
 };
 
 /** Records what the dialog was asked, so the prompt content is assertable. */
-function fakeUi(answer, mode = "tui", keys = undefined) {
+function fakeUi(answer, mode = "tui", keys = undefined, width = 80) {
 	let calls = 0;
 	let seen = [];
 	let rendered = [];
@@ -91,14 +91,14 @@ function fakeUi(answer, mode = "tui", keys = undefined) {
 					settled = result;
 					settleCount += 1;
 				});
-				const raw = component.render(80);
+				const raw = component.render(width);
 				renderedRaw = raw;
 				rendered = raw.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
 				// Drive the real key handling instead of faking the result.
 				// `keys` lets a test send several presses (e.g. down then enter).
 				for (const key of keys ?? [answer ? "\r" : "\u001b"]) {
 					component.handleInput(key);
-					renderedRaw = component.render(80);
+					renderedRaw = component.render(width);
 					rendered = renderedRaw.map((line) => line.replace(/\x1b\[[0-9;]*m/g, ""));
 				}
 				// Record whether the component settled on its own: "no settle" and
@@ -245,6 +245,21 @@ try {
 	assert.match(shownUi.rendered.join("\n"), /Bash command/, "handler: the box is titled");
 	assert.match(shownUi.rendered.join("\n"), /> 1\. Yes/, "handler: the selected option is marked with >");
 	assert.ok(shownUi.rendered.every((l) => l.length === shownUi.rendered[0].length), "handler: the box borders align");
+
+	// The dialog is not an overlay: it takes the editor slot, so it owns the whole
+	// terminal width. It used to cap its content at 76 columns, which on a wide
+	// terminal shrank the prompt into a narrow block against the left edge with the
+	// rest of every row blank.
+	for (const width of [100, 160, 200]) {
+		const wide = fakeUi(true, "tui", undefined, width);
+		await handleToolCall({ toolName: "bash", input: { command: "git push origin main" } }, wide, ["git push"]);
+		const widths = wide.renderedRaw.map((l) => [...l.replace(/\x1b\[[0-9;]*m/g, "")].length);
+		assert.equal(Math.max(...widths), width, `the dialog fills all ${width} columns`);
+		assert.ok(
+			widths.every((w) => w === width),
+			`every row of the ${width}-column dialog is ${width} wide (got ${[...new Set(widths)].join(", ")})`,
+		);
+	}
 
 	// A permission dialog must not render as one flat block. The design was measured
 	// from a real Claude Code prompt: a continuous dim rail, an accent title, muted

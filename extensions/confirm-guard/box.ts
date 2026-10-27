@@ -47,9 +47,15 @@ const OPTIONS = [
 	{ label: "No", hint: "do not run it", accept: false },
 ] as const;
 
-/** Content width: terminal width minus rail (1), gutter (2) and a right margin (2). */
+/**
+ * Content width: the terminal width minus the rail (1) and the gutter (2). The dialog
+ * is not an overlay -- it takes the editor slot -- so it owns every column it is given.
+ * It used to stop at 76 columns (Claude Code's own prompt is that narrow on an 80-column
+ * terminal), which on a wide terminal left the prompt as a block in the left corner with
+ * the rest of each row blank.
+ */
 function contentWidth(width: number): number {
-	return Math.max(20, Math.min(width - 5, 76));
+	return Math.max(1, width - 3);
 }
 
 /** Visible width of a styled string: strip SGR, then count code points. */
@@ -102,8 +108,8 @@ export class ConfirmBox implements Component {
 	 */
 	private row(content: string, width: number): string {
 		const { theme } = this;
-		// contentWidth is the *content* budget; the gutter occupies 2 columns outside it,
-		// so the rendered line is 1 (rail) + 2 (gutter) + contentWidth.
+		// contentWidth is the *content* budget; the rail and the gutter occupy 3 columns
+		// outside it, so the rendered line is exactly `width`.
 		const limit = contentWidth(width);
 		const body = truncate(content, limit);
 		const gap = Math.max(0, limit - visibleWidth(body));
