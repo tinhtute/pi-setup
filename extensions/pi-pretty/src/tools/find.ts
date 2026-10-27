@@ -34,7 +34,13 @@ function normalizeSdkFindOutput(text: string): { text: string; matchCount: numbe
 
 	const noticeMatch = /\n\n\[([^\r\n]*)\]\s*$/.exec(text);
 	const body = noticeMatch ? text.slice(0, noticeMatch.index) : text;
-	const notices = noticeMatch ? noticeMatch[1].split(". ").filter(Boolean) : [];
+	// The SDK emits one bracketed block of sentences (`[N entries limit reached.
+	// Use limit=M for more]`). Keep it whole: splitting on `. ` cut a single notice
+	// into two, and the renderer then re-joined them with `. ` — right for this
+	// string, wrong for any notice containing an abbreviation, a version number,
+	// or its own punctuation. One block is one notice.
+	const trimmedNotice = noticeMatch?.[1].trim() ?? "";
+	const notices = trimmedNotice ? [trimmedNotice] : [];
 	const matchCount = body.trim() ? body.trim().split("\n").filter(Boolean).length : 0;
 	return { text: body, matchCount, notices };
 }
