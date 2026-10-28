@@ -8,13 +8,11 @@
  * Layout:
  *   config/ansi.ts         ANSI palette, writable bindings, background resolution
  *   config/config-file.ts  schema, loadConfig, tool-set resolvers
- *   config/icons.ts        Nerd Font file/dir icons
  *   config/lang.ts         extension -> Shiki language
  *   config/terminal.ts     clamped terminal width
  */
 
 export * from "./config/ansi.js";
 export * from "./config/config-file.js";
-export * from "./config/icons.js";
 export * from "./config/lang.js";
 export * from "./config/terminal.js";

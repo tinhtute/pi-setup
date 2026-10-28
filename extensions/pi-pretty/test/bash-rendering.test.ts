@@ -207,25 +207,20 @@ describe("bash renderCall expansion", () => {
 	it("adds one blank row above and below every tool header", () => {
 		const previousEnabledTools = process.env.PRETTY_ENABLE_TOOLS;
 		const previousDisabledTools = process.env.PRETTY_DISABLE_TOOLS;
-		process.env.PRETTY_ENABLE_TOOLS = "ls";
+		delete process.env.PRETTY_ENABLE_TOOLS;
 		delete process.env.PRETTY_DISABLE_TOOLS;
 		const tools = loadTools();
-		if (previousEnabledTools === undefined) {
-			delete process.env.PRETTY_ENABLE_TOOLS;
-		} else {
+		if (previousEnabledTools !== undefined) {
 			process.env.PRETTY_ENABLE_TOOLS = previousEnabledTools;
 		}
-		if (previousDisabledTools === undefined) {
-			delete process.env.PRETTY_DISABLE_TOOLS;
-		} else {
+		if (previousDisabledTools !== undefined) {
 			process.env.PRETTY_DISABLE_TOOLS = previousDisabledTools;
 		}
-		expect([...tools.keys()].sort()).toEqual(["bash", "find", "grep", "ls", "read"]);
+		expect([...tools.keys()].sort()).toEqual(["bash", "find", "grep", "read"]);
 		const headers: Array<[string, Record<string, unknown>, boolean]> = [
 			["bash", { command: "pwd" }, false],
 			["find", { pattern: "*.ts", path: "src" }, false],
 			["grep", { pattern: "TODO", path: "src" }, false],
-			["ls", { path: "src" }, false],
 			["read", { path: "missing.ts" }, true],
 		];
 
@@ -429,7 +424,10 @@ describe("bash renderCall expansion", () => {
 		withStdoutColumns(120, () => {
 			const bashTool = loadBashTool();
 			const rendered = bashTool.renderResult(
-				{ content: [{ type: "text", text: "hello world" }], details: { _type: "bashResult", text: "hello world", exitCode: 0, command: "echo hi" } },
+				{
+					content: [{ type: "text", text: "hello world" }],
+					details: { _type: "bashResult", text: "hello world", exitCode: 0, command: "echo hi" },
+				},
 				{},
 				mockTheme,
 				{

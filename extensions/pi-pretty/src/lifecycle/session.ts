@@ -1,6 +1,6 @@
 /**
  * Everything that has to be wired at session granularity: the working row, the
- * animated hidden-thinking label, the prompt editor, and the user-message rail.
+ * animated hidden-thinking label, and the prompt editor.
  *
  * Split out of index.ts because this is the only part of the extension that owns
  * mutable per-session state. Keeping it in one place makes the lifecycle
@@ -17,11 +17,10 @@ import type {
 	MessageUpdateEvent,
 } from "@earendil-works/pi-coding-agent";
 import * as hostSdk from "@earendil-works/pi-coding-agent";
-import { getDefaultAgentDir, loadConfig, type PrettyConfig } from "../config.js";
+import { getDefaultAgentDir, type PrettyConfig } from "../config.js";
 import { installGradientLabels, uninstallGradientLabels } from "../indicator/gradient.js";
 import { createPromptEditorClass } from "../prompt-editor.js";
 import type { PiPrettyDeps } from "../types.js";
-import { installUserRail, setUserRail } from "../user-rail.js";
 import {
 	createThinkingLabelAnimator,
 	createThinkingTimer,
@@ -150,8 +149,6 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 				getTheme: () => ctx.ui.theme as unknown as WorkingThemeLike,
 			});
 			installPromptEditor(ctx);
-			setUserRail(loadConfig().userRail);
-			installUserRail((hostSdk as unknown as { UserMessageComponent?: unknown }).UserMessageComponent);
 			ctx.ui.setToolsExpanded(false);
 			// Per-row hidden-thinking labels: intercept the host's label fan-out so
 			// each row keeps its own duration. Falls back to the global-label

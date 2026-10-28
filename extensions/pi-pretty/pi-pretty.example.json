@@ -4,11 +4,7 @@
 		"error": "#2a1e1e"
 	},
 	"theme": "github-dark",
-	"icons": "nerd",
-	"userRail": "#3a3a4a",
-	"enableTools": [
-		"ls"
-	],
+	"enableTools": [],
 	"disableTools": [],
 	"maxHlChars": 80000,
 	"maxPreviewLines": 80,

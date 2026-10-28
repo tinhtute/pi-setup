@@ -46,7 +46,6 @@ describe("loadConfig", () => {
 			JSON.stringify({
 				background: { tool: "#1e1e2e", error: "#2a1e1e" },
 				theme: "github-dark",
-				icons: "none",
 				enableTools: ["LS", " grep "],
 				disableTools: ["grep"],
 				maxHlChars: 42,
@@ -57,7 +56,6 @@ describe("loadConfig", () => {
 		expect(loadConfig(dir)).toEqual({
 			background: { tool: "#1e1e2e", error: "#2a1e1e" },
 			theme: "github-dark",
-			icons: "none",
 			enableTools: ["ls", "grep"],
 			disableTools: ["grep"],
 			maxHlChars: 42,
@@ -72,7 +70,6 @@ describe("loadConfig", () => {
 			JSON.stringify({
 				background: { tool: "not-a-color", error: "#123456" },
 				theme: 42,
-				icons: true,
 				enableTools: "ls",
 				disableTools: [1, null],
 				maxHlChars: 0,
@@ -117,29 +114,18 @@ describe("applyConfig", () => {
 		vi.stubEnv("PRETTY_MAX_HL_CHARS", "");
 		vi.stubEnv("PRETTY_MAX_PREVIEW_LINES", "");
 		vi.stubEnv("PRETTY_CACHE_LIMIT", "");
-		vi.stubEnv("PRETTY_ICONS", "");
 		const config = await freshModule<typeof import("../src/config.js")>("../src/config.js");
-		config.applyConfig({ maxHlChars: 42, maxPreviewLines: 10, cacheLimit: 5, icons: "none" });
+		config.applyConfig({ maxHlChars: 42, maxPreviewLines: 10, cacheLimit: 5 });
 		expect(config.MAX_HL_CHARS).toBe(42);
 		expect(config.MAX_PREVIEW_LINES).toBe(10);
 		expect(config.CACHE_LIMIT).toBe(5);
-		expect(config.USE_ICONS).toBe(false);
 	});
 
 	it("keeps env values when env vars are set", async () => {
 		vi.stubEnv("PRETTY_MAX_HL_CHARS", "999");
-		vi.stubEnv("PRETTY_ICONS", "nerd");
 		const config = await freshModule<typeof import("../src/config.js")>("../src/config.js");
-		config.applyConfig({ maxHlChars: 42, icons: "none" });
+		config.applyConfig({ maxHlChars: 42 });
 		expect(config.MAX_HL_CHARS).toBe(999);
-		expect(config.USE_ICONS).toBe(true);
-	});
-
-	it("treats icons 'off' like 'none'", async () => {
-		vi.stubEnv("PRETTY_ICONS", "");
-		const config = await freshModule<typeof import("../src/config.js")>("../src/config.js");
-		config.applyConfig({ icons: "off" });
-		expect(config.USE_ICONS).toBe(false);
 	});
 });
 

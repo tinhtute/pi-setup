@@ -86,13 +86,6 @@ const SCENARIOS: Record<string, { args: any; result: any; errorText?: string }> 
 			details: { _type: "findResult", text: "src/a.ts\nsrc/b.ts", pattern: "*.ts", matchCount: 2, notices: ["n1"] },
 		},
 	},
-	ls: {
-		args: { path: "src" },
-		result: {
-			content: [{ type: "text", text: "a.ts\nb/" }],
-			details: { _type: "lsResult", text: "a.ts\nb/", path: "src", entryCount: 2 },
-		},
-	},
 	read: {
 		args: { path: "a.ts" },
 		result: {
@@ -126,7 +119,7 @@ function nonBlankRows(raw: string): string[] {
 }
 const lead = (r: string) => r.length - r.trimStart().length;
 
-const TOOLS = ["read", "bash", "ls", "find", "grep"];
+const TOOLS = ["read", "bash", "find", "grep"];
 const MODES: Array<[string, boolean, "ok" | "error"]> = [
 	["collapsed", false, "ok"],
 	["expanded", true, "ok"],
@@ -149,32 +142,21 @@ describe("outputPad threading", () => {
 					expect(rows.length).toBeGreaterThan(0);
 					expect(Math.min(...rows.map(lead))).toBe(pad);
 					// Every row's smallest indent is the configured one (no hard-coded single space).
-					if (pad === 0 && name !== "read" && name !== "find" && name !== "ls") expect(rows.every((r) => !r.startsWith(" "))).toBe(true);
+					if (pad === 0 && name !== "read" && name !== "find") expect(rows.every((r) => !r.startsWith(" "))).toBe(true);
 				}
 			});
 		}
 	}
 
 	it("invalid outputPad values fall back to 1", () => {
-		const base = render("ls", true, { outputPad: 1 });
+		const base = render("read", true, { outputPad: 1 });
 		for (const bad of [-1, 1.5, Number.NaN, "2" as unknown as number]) {
-			expect(render("ls", true, { outputPad: bad })).toBe(base);
+			expect(render("read", true, { outputPad: bad })).toBe(base);
 		}
 	});
 
-	it("ls expanded nested rows scale with pad", () => {
-		const rows = render("ls", true, { outputPad: 3 })
-			.replaceAll("\u0000", "\n")
-			.split("\n")
-			.map(strip);
-		expect(rows.some((r) => /^ {3}├── .*a\.ts$/.test(r))).toBe(true);
-	});
-
 	it("read expanded line-number rows use the configured pad", () => {
-		const rows = render("read", true, { outputPad: 3 })
-			.replaceAll("\u0000", "\n")
-			.split("\n")
-			.map(strip);
+		const rows = render("read", true, { outputPad: 3 }).replaceAll("\u0000", "\n").split("\n").map(strip);
 		expect(rows.some((r) => /^ {3} {2}1 │ const a/.test(r))).toBe(true);
 	});
 
@@ -226,7 +208,7 @@ describe("durationMs preference", () => {
 		return strip(`${call.getText()}\n${res.getText()}`);
 	};
 
-	for (const name of ["bash", "find", "ls"]) {
+	for (const name of ["bash", "find"]) {
 		for (const expanded of [false, true]) {
 			it(`${name} ${expanded ? "expanded" : "collapsed"}: durationMs 0 wins over metadata`, () => {
 				const out = rows(name, 0, expanded);
@@ -323,8 +305,7 @@ describe("find hierarchy is structural", () => {
 	beforeEach(() => {
 		process.stdout.columns = 100;
 	});
-	const bodyRows = (pad: number) =>
-		render("find", true, { outputPad: pad }).split("\u0000")[1].split("\n").map(strip);
+	const bodyRows = (pad: number) => render("find", true, { outputPad: pad }).split("\u0000")[1].split("\n").map(strip);
 	for (const [pad, dirLead] of [
 		[0, 0],
 		[1, 1],
@@ -358,9 +339,9 @@ describe("host duration validity", () => {
 describe("oversized pad", () => {
 	it("falls back to 1 when pad exceeds the terminal width", () => {
 		process.stdout.columns = 40;
-		expect(render("ls", true, { outputPad: 1_000_000_000 })).toBe(render("ls", true, { outputPad: 1 }));
-		expect(render("ls", true, { outputPad: 41 })).toBe(render("ls", true, { outputPad: 1 }));
-		expect(Math.min(...nonBlankRows(render("ls", true, { outputPad: 40 })).map(lead))).toBe(40);
+		expect(render("find", true, { outputPad: 1_000_000_000 })).toBe(render("find", true, { outputPad: 1 }));
+		expect(render("find", true, { outputPad: 41 })).toBe(render("find", true, { outputPad: 1 }));
+		expect(Math.min(...nonBlankRows(render("find", true, { outputPad: 40 })).map(lead))).toBe(40);
 	});
 });
 

@@ -32,28 +32,17 @@ function loadTools() {
 		on: () => {},
 	};
 
-	// ls sits in DEFAULT_DISABLED_TOOLS — enable it for the render sweep.
-	const previousEnabledTools = process.env.PRETTY_ENABLE_TOOLS;
-	process.env.PRETTY_ENABLE_TOOLS = "ls";
-	try {
-		piPrettyExtension(pi, {
-			sdk: {
-				createReadToolDefinition: noopCwd(noopExec),
-				createBashToolDefinition: noopCwd(noopExec),
-				createLsToolDefinition: noopCwd(noopExec),
-				createFindToolDefinition: noopCwd(noopExec),
-				createGrepToolDefinition: noopCwd(noopExec),
-				getAgentDir: () => "/tmp/pi-pretty-test",
-			},
-			TextComponent: MockText,
-		});
-	} finally {
-		if (previousEnabledTools === undefined) {
-			delete process.env.PRETTY_ENABLE_TOOLS;
-		} else {
-			process.env.PRETTY_ENABLE_TOOLS = previousEnabledTools;
-		}
-	}
+	// No env override: run the sweep with the renderers that register by default.
+	piPrettyExtension(pi, {
+		sdk: {
+			createReadToolDefinition: noopCwd(noopExec),
+			createBashToolDefinition: noopCwd(noopExec),
+			createFindToolDefinition: noopCwd(noopExec),
+			createGrepToolDefinition: noopCwd(noopExec),
+			getAgentDir: () => "/tmp/pi-pretty-test",
+		},
+		TextComponent: MockText,
+	});
 
 	return tools;
 }
@@ -99,7 +88,10 @@ describe("tool title/result spacing (blank rows around titles)", () => {
 		const state: Record<string, unknown> = {};
 		const call = tool.renderCall({ command: "echo out" }, mockTheme, ctx(false, state));
 		const result = tool.renderResult(
-			{ content: [{ type: "text", text: "out" }], details: { _type: "bashResult", text: "out", exitCode: 0, command: "echo out" } },
+			{
+				content: [{ type: "text", text: "out" }],
+				details: { _type: "bashResult", text: "out", exitCode: 0, command: "echo out" },
+			},
 			{},
 			mockTheme,
 			ctx(false, state),
@@ -117,7 +109,10 @@ describe("tool title/result spacing (blank rows around titles)", () => {
 		const state: Record<string, unknown> = {};
 		const call = tool.renderCall({ command: "echo out" }, mockTheme, ctx(true, state));
 		const result = tool.renderResult(
-			{ content: [{ type: "text", text: "out" }], details: { _type: "bashResult", text: "out", exitCode: 0, command: "echo out" } },
+			{
+				content: [{ type: "text", text: "out" }],
+				details: { _type: "bashResult", text: "out", exitCode: 0, command: "echo out" },
+			},
 			{},
 			mockTheme,
 			ctx(true, state),
@@ -179,7 +174,10 @@ describe("tool title/result spacing (blank rows around titles)", () => {
 		const state: Record<string, unknown> = {};
 		const call = tool.renderCall({ pattern: "*.missing" }, mockTheme, ctx(false, state));
 		const result = tool.renderResult(
-			{ content: [{ type: "text", text: "" }], details: { _type: "findResult", text: "", pattern: "*.missing", matchCount: 0 } },
+			{
+				content: [{ type: "text", text: "" }],
+				details: { _type: "findResult", text: "", pattern: "*.missing", matchCount: 0 },
+			},
 			{},
 			mockTheme,
 			ctx(false, state),
@@ -201,41 +199,6 @@ describe("tool title/result spacing (blank rows around titles)", () => {
 		expect(rows[1]?.trim()).toContain("✱ find");
 		expect(rows[2]?.trim()).toBe("");
 		expect(rows[3]).toContain("src/a.ts");
-		expect(rows.at(-1)?.trim()).toBe("");
-	});
-
-	it("ls collapsed: summary moves into the title row", () => {
-		const tool = loadTools().get("ls");
-		const state: Record<string, unknown> = {};
-		const call = tool.renderCall({ path: "src" }, mockTheme, ctx(false, state));
-		const result = tool.renderResult(
-			{ content: [{ type: "text", text: "a.ts" }], details: { _type: "lsResult", text: "a.ts", path: "src", entryCount: 1 } },
-			{},
-			mockTheme,
-			ctx(false, state),
-		);
-		const rows = stackedRows(call, result);
-		expect(rows[0]?.trim()).toBe("");
-		expect(rows[1]?.trim()).toBe("ls src 1 entries — ctrl+o to expand");
-		expect(rows[2]?.trim()).toBe("");
-		expect(rows).toHaveLength(3);
-	});
-
-	it("ls expanded: title has top and bottom padding", () => {
-		const tool = loadTools().get("ls");
-		const state: Record<string, unknown> = {};
-		const call = tool.renderCall({ path: "src" }, mockTheme, ctx(true, state));
-		const result = tool.renderResult(
-			{ content: [{ type: "text", text: "a.ts" }], details: { _type: "lsResult", text: "a.ts", path: "src", entryCount: 1 } },
-			{},
-			mockTheme,
-			ctx(true, state),
-		);
-		const rows = stackedRows(call, result);
-		expect(rows[0]?.trim()).toBe("");
-		expect(rows[1]?.trim()).toBe("ls src");
-		expect(rows[2]?.trim()).toBe("");
-		expect(rows[3]).toContain("1 entries");
 		expect(rows.at(-1)?.trim()).toBe("");
 	});
 });

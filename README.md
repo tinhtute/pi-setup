@@ -479,7 +479,8 @@ Everything except `background.*` is read once at startup, so a config change nee
 **restart**, not just `/reload`. The file used to carry `toolStyle: "claudecode"`; that
 style and its key are gone, so the template no longer ships it.
 
-`icons: "nerd"` is the default and needs a Nerd Font; `none` falls back to plain ASCII.
+`icons` and `PRETTY_ICONS` went with the `ls` renderer: pi-pretty draws no tree view any
+more, so there is no icon table left to switch off and the extension needs no Nerd Font.
 `theme` only drives the `read` preview — `settings.json`'s `theme: "system"` is not a Shiki
 name, so the default `github-dark` applies. Diffs are **not** covered: that needs the
 companion `@heyhuynhgiabuu/pi-diff`. It owns neither the header nor the footer, so

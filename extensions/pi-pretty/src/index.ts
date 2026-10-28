@@ -1,10 +1,9 @@
 /**
  * pi-pretty — Pretty terminal output for pi built-in tools.
  *
- * Enhances read, bash, ls, find, and grep with:
+ * Enhances read, bash, find, and grep with:
  *   • Syntax-highlighted file content (Shiki)
  *   • Colored bash exit status + output
- *   • Tree-view directory listings with file-type icons
  *   • Custom ANSI rendering for all tools
  */
 

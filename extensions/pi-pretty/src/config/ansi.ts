@@ -25,14 +25,6 @@ export const FG_MUTED = "\x1b[38;2;139;148;158m";
 
 const BG_DEFAULT = "\x1b[49m";
 
-/** Nerd Font icons are on unless PRETTY_ICONS or config says otherwise. */
-const ICONS_MODE = (process.env.PRETTY_ICONS ?? "nerd").toLowerCase();
-export let USE_ICONS = ICONS_MODE !== "none" && ICONS_MODE !== "off";
-
-/** Read the live value: applyConfig() can flip it after module load. */
-export function getUseIcons(): boolean {
-	return USE_ICONS;
-}
 export let BG_BASE = BG_DEFAULT;
 export let BG_ERROR = BG_DEFAULT;
 
@@ -125,10 +117,6 @@ export function applyConfig(config: PrettyConfig): void {
 	if (!process.env.PRETTY_MAX_HL_CHARS && config.maxHlChars) MAX_HL_CHARS = config.maxHlChars;
 	if (!process.env.PRETTY_MAX_PREVIEW_LINES && config.maxPreviewLines) MAX_PREVIEW_LINES = config.maxPreviewLines;
 	if (!process.env.PRETTY_CACHE_LIMIT && config.cacheLimit) CACHE_LIMIT = config.cacheLimit;
-	if (!process.env.PRETTY_ICONS && config.icons) {
-		const mode = config.icons.toLowerCase();
-		USE_ICONS = mode !== "none" && mode !== "off";
-	}
 }
 
 // ---------------------------------------------------------------------------

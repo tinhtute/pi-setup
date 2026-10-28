@@ -12,7 +12,6 @@ It currently enhances:
 - **user messages**: a `❯` prompt icon using `userMessageText`; **live input** follows the active thinking-level color for its icon
 - **`read`**: syntax-highlighted text previews with line numbers, `read docs` labels for Pi documentation reads, plus inline image rendering when the terminal supports it
 - **`bash`**: colored exit summary (`exit 0`/`exit 1`) with a preview body of command output
-- **`ls`**: Nerd Font file icons with tree-oriented rendering
 - **`find` / `grep`**: grouped/highlighted rendering of Pi's own search results
 - **working indicator**: an [oh-my-pi](https://github.com/can1357/oh-my-pi)-style shimmer sweep in the input's top-border `Working…` row — flush-left, rotating phrases, per-session accent tint (see [Working indicator](#working-indicator-shimmer))
 - **thinking label**: the hidden-thinking `Thinking...` label gets the same shimmer treatment (see [Thinking label](#thinking-label-shimmer))
@@ -38,8 +37,8 @@ pi -e ./src/index.ts
 ![Bash and read rendering](media/bash-and-read.png)
 *`bash` exit summary + output preview, and syntax-highlighted `read` text output.*
 
-![Icons and grep rendering](media/icons-and-grep.png)
-*`ls`/`find`/`grep` with Nerd Font icons and grouped/tree-oriented rendering.*
+![Grep rendering](media/icons-and-grep.png)
+*`find`/`grep` with grouped, highlighted rendering.*
 
 ![Inline image rendering](media/inline-image.png)
 *`read` rendering an image inline in supported terminals.*
@@ -77,7 +76,6 @@ Examples:
 find pattern="*.ts" path="src"
 grep pattern="handleRequest" glob="*.ts"
 read path="src/index.ts"
-ls path="src"
 ```
 
 ### Notes
@@ -98,8 +96,7 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 		"error": "#2a1e1e"
 	},
 	"theme": "github-dark",
-	"icons": "nerd",
-	"enableTools": ["ls"],
+	"enableTools": [],
 	"disableTools": ["grep"],
 	"maxHlChars": 80000,
 	"maxPreviewLines": 80,
@@ -115,13 +112,11 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 | `background.tool` | hex color | — | terminal default |
 | `background.error` | hex color | — | `background.tool` |
 | `theme` | Shiki theme name | `PRETTY_THEME` | `github-dark` (after `pi-pretty.json` `theme`, then `~/.pi/agent/settings.json` `theme`, when valid Shiki themes) |
-| `icons` | `nerd` \| `none` (or `off`) | `PRETTY_ICONS` | `nerd` |
-| `enableTools` | string array | `PRETTY_ENABLE_TOOLS` | `[]` (`ls` is opt-in) |
+| `enableTools` | string array | `PRETTY_ENABLE_TOOLS` | `[]` (nothing ships disabled) |
 | `disableTools` | string array | `PRETTY_DISABLE_TOOLS` | `[]` |
 | `maxHlChars` | positive int | `PRETTY_MAX_HL_CHARS` | `80000` |
 | `maxPreviewLines` | positive int | `PRETTY_MAX_PREVIEW_LINES` | `80` |
 | `cacheLimit` | positive int | `PRETTY_CACHE_LIMIT` | `128` |
-| `userRail` | `#rrggbb`; draws a one-cell tinted bar left of user messages instead of a full-width background, so translucent/acrylic terminals keep their blur | — | unset (disabled) |
 | `workingIndicator.enabled` | boolean | `PRETTY_WORKING_INDICATOR` (`on`/`off`) | `true` |
 | `workingIndicator.text` | string or string[] (phrases rotated per sweep; env accepts comma-separated) | `PRETTY_WORKING_INDICATOR_TEXT` | `["Working…"]` |
 | `workingIndicator.mode` | `shimmer` \| `kitt` \| `static` | `PRETTY_WORKING_INDICATOR_MODE` | `shimmer` |
@@ -202,12 +197,11 @@ Optional environment variables:
 - `PRETTY_MAX_HL_CHARS` (default: `80000`)
 - `PRETTY_MAX_PREVIEW_LINES` (default: `80`)
 - `PRETTY_CACHE_LIMIT` (default: `128`)
-- `PRETTY_ICONS` (`nerd` by default, set to `none` to disable icons)
 - `PRETTY_WORKING_INDICATOR` (`on`/`off`, overrides `workingIndicator.enabled`)
 - `PRETTY_WORKING_INDICATOR_MODE` (`shimmer`/`kitt`/`static`)
 - `PRETTY_WORKING_INDICATOR_TEXT` (indicator label)
 - `PRETTY_DISABLE_TOOLS` — comma-separated list of tool names to skip during registration (e.g. `read,grep`). Explicit disables take precedence over enabled defaults.
-- `PRETTY_ENABLE_TOOLS` — comma-separated list of opt-in tools. `ls` is disabled by default; set `PRETTY_ENABLE_TOOLS=ls` to register it.
+- `PRETTY_ENABLE_TOOLS` — comma-separated list of tools to force-enable. No renderer ships disabled, so this only matters if a default changes; use `PRETTY_DISABLE_TOOLS` to opt out.
 
 ## Development
 
