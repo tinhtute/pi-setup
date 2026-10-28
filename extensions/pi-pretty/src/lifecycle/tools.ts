@@ -32,7 +32,6 @@ export function registerPrettyTools(options: ToolRegistrationOptions): void {
 	const sdk: SdkTools = depsSdk ?? {
 		createReadToolDefinition: hostSdk.createReadToolDefinition,
 		createBashToolDefinition: hostSdk.createBashToolDefinition,
-		createLsToolDefinition: hostSdk.createLsToolDefinition,
 		createFindToolDefinition: hostSdk.createFindToolDefinition,
 		createGrepToolDefinition: hostSdk.createGrepToolDefinition,
 	};

@@ -40,7 +40,6 @@ export interface PrettyConfig {
 		error?: string;
 	};
 	theme?: string;
-	enableTools?: string[];
 	disableTools?: string[];
 	maxHlChars?: number;
 	maxPreviewLines?: number;
@@ -84,9 +83,7 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 			if (background.tool || background.error) config.background = background;
 		}
 		if (typeof parsed.theme === "string" && parsed.theme.trim() !== "") config.theme = parsed.theme;
-		const enableTools = normalizeToolList(parsed.enableTools);
 		const disableTools = normalizeToolList(parsed.disableTools);
-		if (enableTools.length) config.enableTools = enableTools;
 		if (disableTools.length) config.disableTools = disableTools;
 		const maxHlChars = positiveInt(parsed.maxHlChars);
 		const maxPreviewLines = positiveInt(parsed.maxPreviewLines);
@@ -146,13 +143,9 @@ export function getConfigDir(): string {
  */
 export function resolveToolSets(
 	envDisabled: Set<string>,
-	envEnabled: Set<string>,
-	config: Pick<PrettyConfig, "disableTools" | "enableTools">,
-): { disabledTools: Set<string>; enabledTools: Set<string> } {
-	return {
-		disabledTools: envDisabled.size > 0 ? envDisabled : new Set(config.disableTools ?? []),
-		enabledTools: envEnabled.size > 0 ? envEnabled : new Set(config.enableTools ?? []),
-	};
+	config: Pick<PrettyConfig, "disableTools">,
+): { disabledTools: Set<string> } {
+	return { disabledTools: envDisabled.size > 0 ? envDisabled : new Set(config.disableTools ?? []) };
 }
 
 /** `HOME` is unset on Windows, where `os.homedir()` resolves `USERPROFILE`. */

@@ -17,9 +17,6 @@ export let RST = "\x1b[0m";
 export const FG_LNUM = "\x1b[38;2;100;100;100m";
 export const FG_DIM = "\x1b[38;2;80;80;80m";
 export const FG_RULE = "\x1b[38;2;50;50;50m";
-export const FG_GREEN = "\x1b[38;2;100;180;120m";
-export const FG_RED = "\x1b[38;2;200;100;100m";
-export const FG_YELLOW = "\x1b[38;2;220;180;80m";
 export const FG_BLUE = "\x1b[38;2;100;140;220m";
 export const FG_MUTED = "\x1b[38;2;139;148;158m";
 
@@ -98,7 +95,7 @@ export function resolveBaseBackground(theme: BgThemeLike | null | undefined): vo
 // Terminal
 // ---------------------------------------------------------------------------
 
-export function envInt(name: string, fallback: number): number {
+function envInt(name: string, fallback: number): number {
 	const v = Number.parseInt(process.env[name] ?? "", 10);
 	return Number.isFinite(v) && v > 0 ? v : fallback;
 }

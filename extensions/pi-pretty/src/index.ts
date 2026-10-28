@@ -17,11 +17,10 @@ import type { PiPrettyDeps } from "./types.js";
 // Config
 // ---------------------------------------------------------------------------
 
-const DEFAULT_DISABLED_TOOLS = new Set(["ls"]);
 const USER_MESSAGE_ICON = "❯";
 
-function envTools(name: "PRETTY_DISABLE_TOOLS" | "PRETTY_ENABLE_TOOLS"): Set<string> {
-	return new Set(normalizeToolList((process.env[name] ?? "").split(",")));
+function envTools(): Set<string> {
+	return new Set(normalizeToolList((process.env.PRETTY_DISABLE_TOOLS ?? "").split(",")));
 }
 
 // ---------------------------------------------------------------------------
@@ -37,18 +36,8 @@ export default async function piPrettyExtension(pi: ExtensionAPI, deps?: PiPrett
 		if (context.messageType !== "user" || markdown.trim() === "") return markdown;
 		return ` ${USER_MESSAGE_ICON} ${markdown}`;
 	});
-	const { disabledTools, enabledTools } = resolveToolSets(
-		envTools("PRETTY_DISABLE_TOOLS"),
-		envTools("PRETTY_ENABLE_TOOLS"),
-		config,
-	);
-	const isToolEnabled = (name: string) => {
-		const normalizedName = name.toLowerCase();
-		return (
-			!disabledTools.has(normalizedName) &&
-			(!DEFAULT_DISABLED_TOOLS.has(normalizedName) || enabledTools.has(normalizedName))
-		);
-	};
+	const { disabledTools } = resolveToolSets(envTools(), config);
+	const isToolEnabled = (name: string) => !disabledTools.has(name.toLowerCase());
 	const cwd = process.cwd();
 
 	// Text component for custom rendering (DI-friendly)

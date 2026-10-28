@@ -31,30 +31,22 @@ function loadTools({ Text = MockText, exec }: Opts = {}) {
 	const noopExec = exec ?? (async () => ({ content: [{ type: "text", text: "" }] }));
 	const tools = new Map<string, any>();
 	const pi = { registerTool: (t: any) => tools.set(t.name, t), registerCommand: () => {}, on: () => {} };
-	const prev = process.env.PRETTY_ENABLE_TOOLS;
-	process.env.PRETTY_ENABLE_TOOLS = "ls";
-	try {
-		const mk = (_cwd: string) => ({
-			name: "mock",
-			description: "mock",
-			parameters: { type: "object", properties: {} },
-			execute: noopExec,
-		});
-		piPrettyExtension(pi, {
-			sdk: {
-				createReadToolDefinition: mk,
-				createBashToolDefinition: mk,
-				createLsToolDefinition: mk,
-				createFindToolDefinition: mk,
-				createGrepToolDefinition: mk,
-				getAgentDir: () => "/tmp/pi-pretty-test",
-			},
-			TextComponent: Text,
-		});
-	} finally {
-		if (prev === undefined) delete process.env.PRETTY_ENABLE_TOOLS;
-		else process.env.PRETTY_ENABLE_TOOLS = prev;
-	}
+	const mk = (_cwd: string) => ({
+		name: "mock",
+		description: "mock",
+		parameters: { type: "object", properties: {} },
+		execute: noopExec,
+	});
+	piPrettyExtension(pi, {
+		sdk: {
+			createReadToolDefinition: mk,
+			createBashToolDefinition: mk,
+			createFindToolDefinition: mk,
+			createGrepToolDefinition: mk,
+			getAgentDir: () => "/tmp/pi-pretty-test",
+		},
+		TextComponent: Text,
+	});
 	return tools;
 }
 

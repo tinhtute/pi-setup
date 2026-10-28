@@ -29,7 +29,6 @@ function mockSdk(contentMap: Map<string, string>) {
 	return {
 		createReadToolDefinition: make("read"),
 		createBashToolDefinition: make("bash"),
-		createLsToolDefinition: make("ls"),
 		createFindToolDefinition: make("find"),
 		createGrepToolDefinition: make("grep"),
 		getAgentDir: () => "/tmp/pi-pretty-test",
@@ -39,9 +38,7 @@ function mockSdk(contentMap: Map<string, string>) {
 /** Load the extension with all tools enabled, immune to ambient PRETTY_DISABLE_TOOLS. */
 async function loadTools(contentMap: Map<string, string>) {
 	const prevDisable = process.env.PRETTY_DISABLE_TOOLS;
-	const prevEnable = process.env.PRETTY_ENABLE_TOOLS;
 	delete process.env.PRETTY_DISABLE_TOOLS;
-	delete process.env.PRETTY_ENABLE_TOOLS;
 	const tools = new Map<string, any>();
 	const handlers: string[] = [];
 	const pi: any = {
@@ -59,8 +56,6 @@ async function loadTools(contentMap: Map<string, string>) {
 	} finally {
 		if (prevDisable === undefined) delete process.env.PRETTY_DISABLE_TOOLS;
 		else process.env.PRETTY_DISABLE_TOOLS = prevDisable;
-		if (prevEnable === undefined) delete process.env.PRETTY_ENABLE_TOOLS;
-		else process.env.PRETTY_ENABLE_TOOLS = prevEnable;
 	}
 	return { tools, handlers };
 }

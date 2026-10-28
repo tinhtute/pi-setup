@@ -4,7 +4,6 @@
 		"error": "#2a1e1e"
 	},
 	"theme": "github-dark",
-	"enableTools": [],
 	"disableTools": [],
 	"maxHlChars": 80000,
 	"maxPreviewLines": 80,

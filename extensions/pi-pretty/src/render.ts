@@ -9,7 +9,7 @@ import { basename, dirname } from "node:path";
 import type { AgentToolResult } from "@earendil-works/pi-coding-agent";
 // Top-level value import so jiti's pi-tui alias applies (it only rewrites
 // static top-level import/require, not function-body require — see tui-text.ts).
-import { Text as TuiText, truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 import { codeToANSI } from "@shikijs/cli";
 import { type BundledLanguage, type BundledTheme, bundledThemes } from "shiki";
 import {
@@ -19,25 +19,14 @@ import {
 	detectLang,
 	FG_BLUE,
 	FG_DIM,
-	FG_LNUM,
-	FG_RULE,
-	FG_YELLOW,
 	loadConfig,
 	MAX_HL_CHARS,
 	MAX_PREVIEW_LINES,
 	RST,
-	resolveBaseBackground,
 	TOOL_RESULT_INDENT,
 	termWidth,
 } from "./config.js";
-import {
-	CHARS_KEY,
-	compactErrorLines,
-	ELAPSED_KEY,
-	formatCharCount,
-	formatElapsedMs,
-	normalizeLineEndings,
-} from "./helpers.js";
+import { compactErrorLines, ELAPSED_KEY, formatElapsedMs, normalizeLineEndings } from "./helpers.js";
 import type { RenderCtxLike as RenderContext, TextLike, ThemeLike } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -142,7 +131,7 @@ const ESC_RE = "\u001b";
 const ANSI_CAPTURE_RE = new RegExp(`${ESC_RE}\\[([0-9;]*)m`, "g");
 const FG_MUTED = "\x1b[38;2;139;148;158m";
 
-export function isLowContrastShikiFg(params: string): boolean {
+function isLowContrastShikiFg(params: string): boolean {
 	if (params === "30" || params === "90") return true;
 	if (params === "38;5;0" || params === "38;5;8") return true;
 	if (!params.startsWith("38;2;")) return false;
@@ -161,9 +150,9 @@ function normalizeShikiContrast(ansi: string): string {
 // Box background helpers
 // ---------------------------------------------------------------------------
 
-export const RESET_WITHOUT_BG = "\x1b[22;23;24;25;27;28;29;39m";
+const RESET_WITHOUT_BG = "\x1b[22;23;24;25;27;28;29;39m";
 
-export function preserveBoxBackground(ansi: string): string {
+function preserveBoxBackground(ansi: string): string {
 	return ansi.replace(ANSI_CAPTURE_RE, (_seq, params: string) => {
 		if (!params || params === "0") return RESET_WITHOUT_BG;
 		const parts = params.split(";").filter(Boolean);
@@ -250,11 +239,6 @@ export function setCollapsedToolTitle(ctx: RenderContext, result: TextLike, suff
 	return true;
 }
 
-function lnum(n: number, w: number): string {
-	const v = String(n);
-	return `${FG_LNUM}${" ".repeat(Math.max(0, w - v.length))}${v}${RST}`;
-}
-
 // ---------------------------------------------------------------------------
 // Tool metrics line
 // ---------------------------------------------------------------------------
@@ -268,17 +252,6 @@ function resolveDurationMs(
 	if (typeof host === "number" && Number.isFinite(host) && host >= 0) return host;
 	const details = result.details as Record<string, unknown> | undefined;
 	return details?.[ELAPSED_KEY] as number | undefined;
-}
-
-export function renderToolMetrics(
-	result: AgentToolResult<Record<string, unknown>>,
-	ctx?: Pick<RenderContext, "durationMs">,
-): string {
-	const details = result.details as Record<string, unknown> | undefined;
-	const elapsed = formatElapsedMs(resolveDurationMs(result, ctx));
-	const chars = formatCharCount(details?.[CHARS_KEY] as number | undefined);
-	if (!elapsed && !chars) return "";
-	return `${FG_DIM}· ${[elapsed, chars].filter(Boolean).join(" · ")}${RST}`;
 }
 
 export function renderToolDuration(
@@ -326,22 +299,6 @@ export async function renderFileContent(
 }
 
 // ---------------------------------------------------------------------------
-// Bash — colored exit status
-// ---------------------------------------------------------------------------
-
-export function renderBashOutput(text: string, indent = TOOL_RESULT_INDENT): string {
-	const lines = text.split("\n");
-	const maxShow = MAX_PREVIEW_LINES;
-	const show = lines.slice(0, maxShow);
-	const remaining = lines.length - maxShow;
-
-	let body = show.join("\n");
-	if (remaining > 0) body += `\n${indent}${FG_DIM}… ${remaining} more lines${RST}`;
-
-	return body;
-}
-
-// ---------------------------------------------------------------------------
 // Find — grouped file list (plain, no tree characters or icons)
 // ---------------------------------------------------------------------------
 
@@ -381,107 +338,4 @@ export function renderFindResults(text: string, theme?: ThemeLike): string {
 	}
 
 	return out.join("\n");
-}
-
-// ---------------------------------------------------------------------------
-// Grep — highlighted matches with line numbers
-// ---------------------------------------------------------------------------
-
-export async function renderGrepResults(text: string, pattern: string, indent = TOOL_RESULT_INDENT): Promise<string> {
-	const lines = normalizeLineEndings(text).split("\n");
-	if (!lines.length || (lines.length === 1 && !lines[0].trim())) return `${FG_DIM}(no matches)${RST}`;
-
-	const out: string[] = [];
-	let currentFile = "";
-	let count = 0;
-
-	let re: RegExp | null = null;
-	try {
-		re = new RegExp(`(${pattern})`, "gi");
-	} catch {
-		/* skip highlighting */
-	}
-
-	for (const line of lines) {
-		if (count >= MAX_PREVIEW_LINES) {
-			out.push(`${FG_DIM}  … more matches${RST}`);
-			break;
-		}
-		const fileMatch = line.match(/^(.+?)[:-](\d+)[:-](.*)$/);
-		if (fileMatch) {
-			const [, file, lineNo, content] = fileMatch;
-			if (file !== currentFile) {
-				if (currentFile) out.push("");
-				out.push(`${FG_BLUE}\x1b[1m${file}${RST}`);
-				currentFile = file;
-			}
-			const nw = Math.max(3, lineNo.length);
-			let display = content;
-			if (re) display = content.replace(re, `${RST}${FG_YELLOW}\x1b[1m$1${RST}`);
-			out.push(`${indent}${lnum(Number(lineNo), nw)} ${FG_RULE}│${RST} ${display}${RST}`);
-			count++;
-		} else if (line.trim() === "--") {
-			out.push(`${indent}${FG_DIM}  ···${RST}`);
-		} else if (line.trim()) {
-			out.push(line);
-			count++;
-		}
-	}
-
-	return out.join("\n");
-}
-
-// ---------------------------------------------------------------------------
-// Generic renderCall / renderResult for custom tools
-// ---------------------------------------------------------------------------
-
-export function makeRenderCall(toolName: string) {
-	return (args: Record<string, unknown>, theme: ThemeLike, ctx: RenderContext) => {
-		resolveBaseBackground(theme);
-		const text = ctx.lastComponent ?? new TuiText("", 0, 0);
-		const bg = ctx.isError ? BG_ERROR : undefined;
-		text.setText(fillToolBackground(`${theme.fg("toolTitle", theme.bold(toolName))}`, bg, undefined, toolIndent(ctx)));
-		return text;
-	};
-}
-
-export function makeRenderResult() {
-	return (result: AgentToolResult<Record<string, unknown>>, _opt: unknown, theme: ThemeLike, ctx: RenderContext) => {
-		resolveBaseBackground(theme);
-		const text = ctx.lastComponent ?? new TuiText("", 0, 0);
-		if (ctx.isError) {
-			text.setText(renderToolError(getTextContent(result) || "Error", theme, toolIndent(ctx)));
-			return text;
-		}
-		const content = getTextContent(result);
-		if (content) {
-			const renderWidth = termWidth();
-			const indent = toolIndent(ctx);
-			const lines = content.split("\n");
-			const maxShow = ctx.expanded ? lines.length : Math.min(lines.length, MAX_PREVIEW_LINES);
-			const preview = lines.slice(0, maxShow).join("\n");
-			const more = lines.length > maxShow ? `\n${FG_DIM}... ${lines.length - maxShow} more lines${RST}` : "";
-			const metrics = renderToolMetrics(result, ctx);
-			text.setText(
-				fillToolBody(
-					`${indent}${preview}${more}${metrics ? `\n${indent}${metrics}` : ""}`,
-					undefined,
-					renderWidth,
-					indent,
-				),
-			);
-		} else {
-			text.setText(
-				fillToolBody(`${toolIndent(ctx)}${theme.fg("dim", "(no text output)")}`, undefined, undefined, toolIndent(ctx)),
-			);
-		}
-		return text;
-	};
-}
-
-function getTextContent(result: AgentToolResult<Record<string, unknown>>): string {
-	return (result.content ?? [])
-		.filter((c: any) => c.type === "text")
-		.map((c: any) => c.text ?? "")
-		.join("\n");
 }

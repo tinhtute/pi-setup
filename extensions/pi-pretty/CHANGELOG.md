@@ -6,9 +6,19 @@
 
 - **the `ls` renderer** (`src/tools/ls.ts`, 129 LOC): pi-pretty no longer re-registers
 `ls`, so the host's stock listing draws it. The slice was already off in the shipped
-config — `ls` is the only entry in `DEFAULT_DISABLED_TOOLS` and neither `config/pi-pretty.json`
-nor the live file re-enabled it — so nothing this repo renders changes. `enableTools` /
-`PRETTY_ENABLE_TOOLS` stay, but no renderer ships disabled any more.
+config — `ls` was the only entry in `DEFAULT_DISABLED_TOOLS` and neither `config/pi-pretty.json`
+nor the live file re-enabled it — so nothing this repo renders changes.
+- **the dead render helpers**: `renderBashOutput`, `renderGrepResults`, `makeRenderCall`,
+`makeRenderResult`, `renderToolMetrics`, `lnum`, `getTextContent` and the `FG_GREEN` /
+`FG_RED` / `FG_YELLOW` colours. `bash` and `grep` grew their own renderers under `tools/`
+long ago, and the generic `makeRender*` pair was only for tools this extension does not
+register; nothing reachable called any of them. Also two imports `thinking-settings.ts`
+never used.
+- **`enableTools` / `PRETTY_ENABLE_TOOLS`** and the `DEFAULT_DISABLED_TOOLS` gate: the
+only entry was `ls`, whose renderer is gone, so the key could no longer enable anything.
+`disableTools` / `PRETTY_DISABLE_TOOLS` stays — that is the half that still does work.
+- **`SdkTools.createLsTool` / `createLsToolDefinition`** and the default wiring that passed
+`hostSdk.createLsToolDefinition`: the SDK factory for the renderer that no longer exists.
 - **the `ls` icon table and tree renderer** (`src/config/icons.ts`, `renderTree`,
 `isLsNotice`): the Nerd Font file/dir icon table and the tree view it drew were reachable
 only from `ls`, so they went with it — along with the `icons` / `PRETTY_ICONS` keys and
