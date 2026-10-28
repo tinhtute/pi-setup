@@ -33,7 +33,6 @@ async function freshModule<T>(path: string): Promise<T> {
 
 beforeEach(() => {
 	// config.js reads several PRETTY_* vars at import time; stub them neutral.
-	vi.stubEnv("PRETTY_ICONS", "nerd");
 	vi.stubEnv("PRETTY_MAX_HL_CHARS", "");
 	vi.stubEnv("PRETTY_MAX_PREVIEW_LINES", "");
 	vi.stubEnv("PRETTY_CACHE_LIMIT", "");

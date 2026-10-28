@@ -58,7 +58,6 @@ beforeEach(() => {
 	writeSettings(true);
 	process.env.HOME = homeDir;
 	for (const name of [
-		"PRETTY_ICONS",
 		"PRETTY_THEME",
 		"PRETTY_MAX_HL_CHARS",
 		"PRETTY_MAX_PREVIEW_LINES",

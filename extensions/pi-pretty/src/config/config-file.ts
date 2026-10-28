@@ -40,7 +40,6 @@ export interface PrettyConfig {
 		error?: string;
 	};
 	theme?: string;
-	icons?: string;
 	enableTools?: string[];
 	disableTools?: string[];
 	maxHlChars?: number;
@@ -85,7 +84,6 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 			if (background.tool || background.error) config.background = background;
 		}
 		if (typeof parsed.theme === "string" && parsed.theme.trim() !== "") config.theme = parsed.theme;
-		if (typeof parsed.icons === "string") config.icons = parsed.icons;
 		const enableTools = normalizeToolList(parsed.enableTools);
 		const disableTools = normalizeToolList(parsed.disableTools);
 		if (enableTools.length) config.enableTools = enableTools;

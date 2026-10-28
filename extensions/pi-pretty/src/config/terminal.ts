@@ -10,6 +10,3 @@ export function termWidth(): number {
 		200;
 	return Math.max(1, Math.min(raw - 4, 210));
 }
-
-// ---------------------------------------------------------------------------
-// File-type icons — Nerd Font glyphs

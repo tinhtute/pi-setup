@@ -92,6 +92,15 @@ missing or out of scope.
 
 ## Progress
 
+Round 3 — **done**: A3 `tools/ls.ts` (129 LOC) and B2 `user-rail.ts` (80 LOC), plus the
+orphan sweep the row-3 estimate got wrong. Deleting the `ls` renderer left
+`renderTree`/`isLsNotice` and the whole of `config/icons.ts` (87 LOC) with no importer, and
+`icons` / `PRETTY_ICONS` existed only to feed that table, so they went too. The `ls` cases
+inside five otherwise-generic suites (output pad, duration, title spacing, prompt metadata,
+header sweep) were pruned; the generic ones now ride on `read`/`find`. Result: 4 423 →
+4 049 LOC of `src/` (35 → 32 files), 284 → 256 tests (23 → 21 files), biome still **0
+errors** (27 warnings, down from 33 with the deleted files).
+
 Round 2 — **done**: B4 `session-color.ts` (172 LOC, `session-color` test, the
 `sessionAccent` key, the `sessionName` parameters on `installWorkingIndicator` and
 `createThinkingLabelAnimator`, and the `session_info_changed` handler that existed
@@ -126,13 +135,16 @@ returns nothing before the added file; run that after any future slice delete.
 |---|---|---|---|---|---|
 | ~~1~~ | ~~B4 `session-color.ts`~~ — **done**, 172 LOC, `session-color` test | 0 | 0 | nothing this repo rendered | Gates were `sessionAccent: false` *and* `stops: "theme"`; passing both also dropped the `sessionName` plumbing and the `session_info_changed` re-tint handler |
 | ~~2~~ | ~~C1 `kitt` + `static` modes~~ — **decided: keep** (2026-10-27) | 0 | 0 | nothing | Not dead weight: the three modes are the feature. Dead *on this machine* is not the same as dead in the repo, and this repo is a template someone else copies. Cutting ~125 lines out of two shared `switch` bodies costs more review attention than it returns. |
-| 3 | A3 `tools/ls.ts` | 129 | `ls-tree-icons` | the `ls` override; `config/icons.ts` stays, it is shared | **check the config first**: `DEFAULT_DISABLED_TOOLS` has `ls` and the shipped config does not re-enable it |
-| 4 | B2 `user-rail.ts` | 80 | `user-rail` | the one-cell rail; user messages go back to the host's rendering | shipped config has no `userRail` key, so nothing changes visually here |
+| ~~3~~ | ~~A3 `tools/ls.ts`~~ — **done**, 129 LOC + 87 of icon table + `renderTree`/`isLsNotice` | 0 | 0 | nothing this repo rendered | The row undercounted. `DEFAULT_DISABLED_TOOLS` + `enableTools` kept it off, as predicted, but the cell's "`config/icons.ts` stays, it is shared" was **wrong**: `fileIcon`/`dirIcon` were imported only by `renderTree`, which only `ls` called. Real cost ≈ 260 LOC + the `icons`/`PRETTY_ICONS` keys |
+| ~~4~~ | ~~B2 `user-rail.ts`~~ — **done**, 80 LOC, `user-rail` test | 0 | 0 | nothing this repo rendered | No `userRail` key in either config file, so `state` stayed `undefined` and the render wrapper was a passthrough — as predicted |
 | 5 | B3 `prompt-editor.ts` | 111 | `prompt-editor` | the boxed prompt around live input | visible on every keystroke — decide, do not guess |
 
-Slices 3 and 4 remove roughly **210 LOC and 2 test files** without changing anything
-this machine renders today: each is gated off by a value in the shipped config.
-Slice 5 is the only one left with a visible cost.
+Rows 3 and 4 removed **≈ 340 LOC and 3 test files** without changing anything this
+machine rendered. Slice 5 is the only one left with a visible cost.
+
+Row 3 also disproved the table's own "free" logic in one place: a slice's LOC number is
+only the module it names, so a shared-looking helper becomes dead weight the moment its
+single caller goes. Grep the helper's importers, not its name, before trusting a row.
 
 ### Method note from round 1
 
@@ -151,16 +163,16 @@ or not — that check is the whole difference between a trim and a regression.
 
 - `sessionAccent: true` gets turned on → slice 1 is a feature, not dead weight.
 - `workingIndicator.mode` stays configurable on purpose (decided 2026-10-27: `kitt` and `static` stay), so do not re-propose C1 unless the modes stop being reachable from config.
-- `ls` gets enabled (it is one config key away) → slice 3 is a feature.
+- ~~`ls` gets enabled (it is one config key away) → slice 3 is a feature.~~ Re-adding `ls` now means restoring the module *and* the icon table it was the only consumer of; the `enableTools` key alone no longer buys a renderer.
 - A future Pi version ships its own shimmer / `Loader` styling → C3 becomes duplicate work and should be re-evaluated before C1.
 
 ## Continuing on another machine
 
 ```bash
-git switch docs/pi-pretty-feature-inventory && git merge main
-cd extensions/pi-pretty && npx tsc --noEmit && npx vitest run   # 284 tests
+git switch main && git pull
+cd extensions/pi-pretty && npx tsc --noEmit && npx vitest run   # 256 tests
 cd ../.. && TMPDIR=$HOME/.cache/tmp node tests/run-all.mjs       # 10 repo suites
-npx biome check extensions/pi-pretty/src/                        # 0 errors, 33 warnings
+npx biome check extensions/pi-pretty/src/                        # 0 errors, 27 warnings
 ```
 
 Deleting any slice means: remove the module, drop its config keys from
