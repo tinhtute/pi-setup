@@ -39,9 +39,6 @@ export interface PrettyConfig {
 		tool?: string;
 		error?: string;
 	};
-	/** Left rail bar on user messages: `#rrggbb`, empty/absent disables. Reads as
-	 * "highlighted but transparent" on acrylic — one-cell bar, not a full-width bg. */
-	userRail?: string;
 	theme?: string;
 	icons?: string;
 	enableTools?: string[];
@@ -88,8 +85,6 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 			if (background.tool || background.error) config.background = background;
 		}
 		if (typeof parsed.theme === "string" && parsed.theme.trim() !== "") config.theme = parsed.theme;
-		if (typeof parsed.userRail === "string" && /^#[0-9a-fA-F]{6}$/.test(parsed.userRail))
-			config.userRail = parsed.userRail;
 		if (typeof parsed.icons === "string") config.icons = parsed.icons;
 		const enableTools = normalizeToolList(parsed.enableTools);
 		const disableTools = normalizeToolList(parsed.disableTools);

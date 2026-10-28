@@ -1,7 +1,6 @@
 import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
-import { registerLsTool } from "../src/tools/ls.js";
 import { registerReadTool } from "../src/tools/read.js";
 
 class MockText {
@@ -59,28 +58,5 @@ describe("host prompt metadata passthrough", () => {
 		);
 
 		expect(definition?.outputSchema).toBe(outputSchema);
-	});
-
-	it("ls forwards the host snippet", () => {
-		let definition: ToolDefinition | undefined;
-		const pi = {
-			registerTool: (d: ToolDefinition) => {
-				definition = d;
-			},
-		} as unknown as ExtensionAPI;
-
-		registerLsTool(
-			pi,
-			process.cwd(),
-			{
-				description: "ls fixture",
-				parameters: { type: "object", properties: {} },
-				promptSnippet: "List directory contents",
-				execute: async () => ({ content: [], details: {} }),
-			},
-			MockText,
-		);
-
-		expect(definition?.promptSnippet).toBe("List directory contents");
 	});
 });

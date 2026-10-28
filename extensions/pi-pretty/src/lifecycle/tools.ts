@@ -1,5 +1,5 @@
 /**
- * Register pi-pretty's renderers for the five file tools.
+ * Register pi-pretty's renderers for the four file tools.
  *
  * Each tool is re-registered with a pretty renderer, keeping the original
  * definition from the host SDK. A tool is skipped when the config disables it or
@@ -11,7 +11,6 @@ import * as hostSdk from "@earendil-works/pi-coding-agent";
 import { registerBashTool } from "../tools/bash.js";
 import { registerFindTool } from "../tools/find.js";
 import { registerGrepTool } from "../tools/grep.js";
-import { registerLsTool } from "../tools/ls.js";
 import { registerReadTool } from "../tools/read.js";
 import type { PiPrettyDeps, SdkTools } from "../types.js";
 
@@ -39,7 +38,6 @@ export function registerPrettyTools(options: ToolRegistrationOptions): void {
 	};
 	const createReadTool = sdk.createReadToolDefinition ?? sdk.createReadTool;
 	const createBashTool = sdk.createBashToolDefinition ?? sdk.createBashTool;
-	const createLsTool = sdk.createLsToolDefinition ?? sdk.createLsTool;
 	const createFindTool = sdk.createFindToolDefinition ?? sdk.createFindTool;
 	const createGrepTool = sdk.createGrepToolDefinition ?? sdk.createGrepTool;
 
@@ -48,9 +46,6 @@ export function registerPrettyTools(options: ToolRegistrationOptions): void {
 	}
 	if (isToolEnabled("bash") && createBashTool) {
 		registerBashTool(pi, cwd, createBashTool(cwd), textComponent);
-	}
-	if (isToolEnabled("ls") && createLsTool) {
-		registerLsTool(pi, cwd, createLsTool(cwd), textComponent);
 	}
 	if (isToolEnabled("find") && createFindTool) {
 		registerFindTool(pi, cwd, createFindTool(cwd), textComponent);

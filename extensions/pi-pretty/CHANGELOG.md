@@ -4,6 +4,14 @@
 
 ### Removed
 
+- **the `ls` renderer** (`src/tools/ls.ts`, 129 LOC): pi-pretty no longer re-registers
+`ls`, so the host's stock listing draws it. The slice was already off in the shipped
+config — `ls` is the only entry in `DEFAULT_DISABLED_TOOLS` and neither `config/pi-pretty.json`
+nor the live file re-enabled it — so nothing this repo renders changes. `enableTools` /
+`PRETTY_ENABLE_TOOLS` stay, but no renderer ships disabled any more.
+- **`user-rail.ts`** (80 LOC): the one-cell tinted bar beside user messages and the
+`userRail` key that armed it. User messages go back to the host's rendering, which is what
+the shipped config already produced — no `userRail` key, so the rail was never armed.
 - **`session-color.ts`**: the per-session accent (172 LOC). It derived a hue from the
 session name on an OKLCH arc and tinted the mid/high tiers plus the dimmed spinner with
 it. Both gates were already closed in the shipped config — `sessionAccent: false` and
