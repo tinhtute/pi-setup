@@ -397,7 +397,7 @@ choice on 2026-10-22:
 | `@juicesharp/rpiv-ask-user-question` | `ask_user_question` (36 calls) |
 | `pi-subagents@0.81.0` | `subagent`, `bg_wait`, FleetView |
 | `@narumitw/pi-goal` | `goal_*` tools and `/goal` |
-| `@heyhuynhgiabuu/pi-pretty` | message and tool rendering (see below); re-registers `read`/`edit`, owns no header or footer |
+| `@heyhuynhgiabuu/pi-pretty` | message and tool rendering (see below); re-registers `read`/`bash`/`find`/`grep`, owns no header or footer |
 
 Dropped, and why they should not come back without a measurement:
 
@@ -454,7 +454,7 @@ Note that `ask_user_question` is deliberately stripped in non-interactive runs
 ### Message and tool rendering (pi-pretty)
 
 `@heyhuynhgiabuu/pi-pretty` styles what the TUI prints: a syntax-highlighted `read` preview,
-a coloured `bash` exit summary, tree-oriented `ls`, grouped `find`/`grep` results, and the
+a coloured `bash` exit summary, grouped `find`/`grep` results, and the
 boxed prompt editor with a `❯` marker on user messages. It hooks internal surfaces — patches to Pi's
 `AssistantMessageComponent` / `ToolExecutionComponent` / chat `Container` — and every patch
 installs inside `session_start` behind `ctx.mode === "tui"`, so `pi -p`, RPC and `--export`

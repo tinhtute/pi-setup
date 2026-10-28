@@ -98,7 +98,7 @@ orphan sweep the row-3 estimate got wrong. Deleting the `ls` renderer left
 `icons` / `PRETTY_ICONS` existed only to feed that table, so they went too. The `ls` cases
 inside five otherwise-generic suites (output pad, duration, title spacing, prompt metadata,
 header sweep) were pruned; the generic ones now ride on `read`/`find`. Result: 4 423 →
-4 049 LOC of `src/` (35 → 32 files), 284 → 256 tests (23 → 21 files), biome still **0
+4 046 LOC of `src/` (35 → 32 files), 284 → 256 tests (23 → 21 files), biome still **0
 errors** (27 warnings, down from 33 with the deleted files).
 
 Round 2 — **done**: B4 `session-color.ts` (172 LOC, `session-color` test, the
