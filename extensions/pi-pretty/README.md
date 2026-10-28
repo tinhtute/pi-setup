@@ -96,7 +96,6 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 		"error": "#2a1e1e"
 	},
 	"theme": "github-dark",
-	"enableTools": [],
 	"disableTools": ["grep"],
 	"maxHlChars": 80000,
 	"maxPreviewLines": 80,
@@ -112,7 +111,6 @@ Place a JSON file alongside Pi's `settings.json` to customize pi-pretty. Every o
 | `background.tool` | hex color | — | terminal default |
 | `background.error` | hex color | — | `background.tool` |
 | `theme` | Shiki theme name | `PRETTY_THEME` | `github-dark` (after `pi-pretty.json` `theme`, then `~/.pi/agent/settings.json` `theme`, when valid Shiki themes) |
-| `enableTools` | string array | `PRETTY_ENABLE_TOOLS` | `[]` (nothing ships disabled) |
 | `disableTools` | string array | `PRETTY_DISABLE_TOOLS` | `[]` |
 | `maxHlChars` | positive int | `PRETTY_MAX_HL_CHARS` | `80000` |
 | `maxPreviewLines` | positive int | `PRETTY_MAX_PREVIEW_LINES` | `80` |
@@ -201,7 +199,6 @@ Optional environment variables:
 - `PRETTY_WORKING_INDICATOR_MODE` (`shimmer`/`kitt`/`static`)
 - `PRETTY_WORKING_INDICATOR_TEXT` (indicator label)
 - `PRETTY_DISABLE_TOOLS` — comma-separated list of tool names to skip during registration (e.g. `read,grep`). Explicit disables take precedence over enabled defaults.
-- `PRETTY_ENABLE_TOOLS` — comma-separated list of tools to force-enable. No renderer ships disabled, so this only matters if a default changes; use `PRETTY_DISABLE_TOOLS` to opt out.
 
 ## Development
 

@@ -46,7 +46,6 @@ describe("loadConfig", () => {
 			JSON.stringify({
 				background: { tool: "#1e1e2e", error: "#2a1e1e" },
 				theme: "github-dark",
-				enableTools: ["LS", " grep "],
 				disableTools: ["grep"],
 				maxHlChars: 42,
 				maxPreviewLines: 10,
@@ -56,7 +55,6 @@ describe("loadConfig", () => {
 		expect(loadConfig(dir)).toEqual({
 			background: { tool: "#1e1e2e", error: "#2a1e1e" },
 			theme: "github-dark",
-			enableTools: ["ls", "grep"],
 			disableTools: ["grep"],
 			maxHlChars: 42,
 			maxPreviewLines: 10,
@@ -70,7 +68,6 @@ describe("loadConfig", () => {
 			JSON.stringify({
 				background: { tool: "not-a-color", error: "#123456" },
 				theme: 42,
-				enableTools: "ls",
 				disableTools: [1, null],
 				maxHlChars: 0,
 				maxPreviewLines: -1,
@@ -95,7 +92,7 @@ describe("loadConfig", () => {
 	it("reads ~/.pi/agent from os.homedir() when HOME is unset (Windows)", async () => {
 		const home = makeEmptyDir();
 		mkdirSync(join(home, ".pi", "agent"), { recursive: true });
-		writeFileSync(join(home, ".pi", "agent", "pi-pretty.json"), JSON.stringify({ enableTools: ["ls"] }));
+		writeFileSync(join(home, ".pi", "agent", "pi-pretty.json"), JSON.stringify({ disableTools: ["grep"] }));
 		vi.stubEnv("HOME", "");
 		vi.stubEnv("PRETTY_CONFIG_DIR", undefined);
 		vi.doMock("node:os", async (importOriginal) => ({
@@ -105,7 +102,7 @@ describe("loadConfig", () => {
 		const config = await freshModule<typeof import("../src/config.js")>("../src/config.js");
 		vi.doUnmock("node:os");
 		expect(config.getDefaultAgentDir()).toBe(join(home, ".pi", "agent"));
-		expect(config.loadConfig()).toEqual({ enableTools: ["ls"] });
+		expect(config.loadConfig()).toEqual({ disableTools: ["grep"] });
 	});
 });
 
@@ -130,18 +127,17 @@ describe("applyConfig", () => {
 });
 
 describe("resolveToolSets", () => {
-	it("prefers non-empty env sets over config arrays", async () => {
+	it("prefers a non-empty env set over the config array", async () => {
 		const { resolveToolSets } = await freshModule<typeof import("../src/config.js")>("../src/config.js");
-		expect(
-			resolveToolSets(new Set(["read"]), new Set(["ls"]), { disableTools: ["grep"], enableTools: ["find"] }),
-		).toEqual({ disabledTools: new Set(["read"]), enabledTools: new Set(["ls"]) });
+		expect(resolveToolSets(new Set(["read"]), { disableTools: ["grep"] })).toEqual({
+			disabledTools: new Set(["read"]),
+		});
 	});
 
-	it("falls back to config arrays when env sets are empty", async () => {
+	it("falls back to the config array when the env set is empty", async () => {
 		const { resolveToolSets } = await freshModule<typeof import("../src/config.js")>("../src/config.js");
-		expect(resolveToolSets(new Set(), new Set(), { disableTools: ["grep"], enableTools: ["ls"] })).toEqual({
+		expect(resolveToolSets(new Set(), { disableTools: ["grep"] })).toEqual({
 			disabledTools: new Set(["grep"]),
-			enabledTools: new Set(["ls"]),
 		});
 	});
 });

@@ -92,6 +92,17 @@ missing or out of scope.
 
 ## Progress
 
+Round 4 — **done**: the dead code the table never listed. `bash`, `find`, `grep` and `read`
+grew their own renderers under `tools/`, leaving `renderBashOutput`, `renderGrepResults`,
+`makeRenderCall`, `makeRenderResult`, `renderToolMetrics`, `lnum` and `getTextContent`
+reachable from nothing (—146 LOC in `render.ts`), plus the `FG_GREEN`/`FG_RED`/`FG_YELLOW`
+colours only they used and two imports `thinking-settings.ts` never touched. The last `ls`
+remnants went too: `enableTools` / `PRETTY_ENABLE_TOOLS` + `DEFAULT_DISABLED_TOOLS` could
+no longer enable anything once `ls` had no renderer, and `SdkTools.createLsTool*` was the
+SDK factory for it. `RAMP_STEPS` stays exported: `tests/test-palette-theme.mjs` pins the
+source line. Result: 4 046 → 3 874 LOC of `src/`, 256 tests unchanged (21 files), biome 0
+errors, 27 → 22 warnings.
+
 Round 3 — **done**: A3 `tools/ls.ts` (129 LOC) and B2 `user-rail.ts` (80 LOC), plus the
 orphan sweep the row-3 estimate got wrong. Deleting the `ls` renderer left
 `renderTree`/`isLsNotice` and the whole of `config/icons.ts` (87 LOC) with no importer, and
@@ -172,7 +183,7 @@ or not — that check is the whole difference between a trim and a regression.
 git switch main && git pull
 cd extensions/pi-pretty && npx tsc --noEmit && npx vitest run   # 256 tests
 cd ../.. && TMPDIR=$HOME/.cache/tmp node tests/run-all.mjs       # 10 repo suites
-npx biome check extensions/pi-pretty/src/                        # 0 errors, 27 warnings
+npx biome check extensions/pi-pretty/src/                        # 0 errors, 22 warnings
 ```
 
 Deleting any slice means: remove the module, drop its config keys from

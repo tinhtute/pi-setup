@@ -70,7 +70,6 @@ function loadTools() {
 		sdk: {
 			createReadToolDefinition: mockToolFactory(noopExec),
 			createBashToolDefinition: mockToolFactory(noopExec),
-			createLsToolDefinition: mockToolFactory(noopExec),
 			createFindToolDefinition: mockToolFactory(noopExec),
 			createGrepToolDefinition: mockToolFactory(noopExec),
 			getAgentDir: () => "/tmp/pi-pretty-test",
@@ -205,14 +204,9 @@ describe("bash renderCall expansion", () => {
 	});
 
 	it("adds one blank row above and below every tool header", () => {
-		const previousEnabledTools = process.env.PRETTY_ENABLE_TOOLS;
 		const previousDisabledTools = process.env.PRETTY_DISABLE_TOOLS;
-		delete process.env.PRETTY_ENABLE_TOOLS;
 		delete process.env.PRETTY_DISABLE_TOOLS;
 		const tools = loadTools();
-		if (previousEnabledTools !== undefined) {
-			process.env.PRETTY_ENABLE_TOOLS = previousEnabledTools;
-		}
 		if (previousDisabledTools !== undefined) {
 			process.env.PRETTY_DISABLE_TOOLS = previousDisabledTools;
 		}

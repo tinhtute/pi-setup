@@ -4,8 +4,6 @@
 
 import type { ThinkingIndicatorConfig } from "../config.js";
 import { envFlag } from "./env.js";
-import { WORKING_INTERVAL_MS } from "./frames.js";
-import type { WorkingThemeLike } from "./types.js";
 
 // ─── Thinking label ───────────────────────────────────────────────────────────
 

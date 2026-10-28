@@ -67,7 +67,6 @@ beforeEach(() => {
 		"PRETTY_WORKING_INDICATOR_TEXT",
 		"PRETTY_THINKING_INDICATOR",
 		"PRETTY_DISABLE_TOOLS",
-		"PRETTY_ENABLE_TOOLS",
 	]) {
 		vi.stubEnv(name, "");
 	}

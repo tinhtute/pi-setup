@@ -18,7 +18,7 @@ function hexToRgb(hex: string): [number, number, number] | undefined {
 }
 
 /** Truecolor ANSI foreground open sequence for a `#rrggbb` hex; empty when unparseable. */
-export function hexToAnsiFg(hex: string): string {
+function hexToAnsiFg(hex: string): string {
 	const rgb = hexToRgb(hex);
 	if (!rgb) return "";
 	return `\x1b[38;2;${rgb[0]};${rgb[1]};${rgb[2]}m`;
