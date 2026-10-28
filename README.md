@@ -22,7 +22,7 @@ bash setup/install.sh --dry-run
 
 | From | To | Notes |
 | :--- | :--- | :--- |
-| `extensions/*.ts` | `~/.pi/agent/extensions/` | Gradient banner, compact statusline/tool calls, `$skill` autocomplete |
+| `extensions/*.ts` | `~/.pi/agent/extensions/` | Gradient banner, statusline footer, `$skill` autocomplete |
 | `extensions/account-pool/` | `~/.pi/agent/extensions/account-pool/` | Multi-file extension: Antigravity account pool with per-model cooldown (`/pool`) |
 | `extensions/rewind/` | `~/.pi/agent/extensions/rewind/` | Multi-file extension: trim old tool results from the model context (`/rewind`) |
 | `scripts/get-secret.sh` | `~/.pi/agent/scripts/` | Reads one key: exported variable first, then `~/.env`; mode `700` |
