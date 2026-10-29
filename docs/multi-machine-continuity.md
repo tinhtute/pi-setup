@@ -8,7 +8,7 @@ involved, they are stored differently, and each option below moves only one of
 them. Getting this wrong is how people end up with two half-finished branches and
 a session file they cannot resume.
 
-Checked 2026-10-28 against `@earendil-works/pi-coding-agent@1.4.0` (docs in the
+Checked 2026-10-29 against `@earendil-works/pi-coding-agent@1.4.0` (docs in the
 installed package) and `@earendil-works/pi-durable@1.4.0`.
 
 ## The three layers
@@ -39,7 +39,7 @@ Relevant commands and settings:
 
 | Knob | Effect |
 | --- | --- |
-| `pi --continue` | Most recent session for the current cwd (matches on the header cwd, so another home directory finds nothing) |
+| `pi --continue` | Most recent session for the current cwd (matches on the header cwd, so another home directory finds nothing) (unverified) |
 | `pi --resume`, `/resume` | Session picker (search, rename, delete, show paths) |
 | `pi --session <path\|id>` | Open a specific session file |
 | `pi --session-dir`, `PI_CODING_AGENT_SESSION_DIR`, `sessionDir` | Store sessions somewhere else (CLI flag wins) |
@@ -85,7 +85,7 @@ Four traps, in the order they bite:
 1. **The cwd is baked into the folder name.** `/home/tinhpt/Lab/x` on Ubuntu and
    `/Users/tinhpt/Lab/x` on macOS are different buckets. `--continue` then finds
    nothing, and `/resume` opens scoped to *Current Folder* — Tab switches the
-   scope to *All*, which lists every bucket and opens the session. A shared
+   scope to *All* (unverified), which lists every bucket and opens the session. A shared
    `--session-dir` or `PI_CODING_AGENT_SESSION_DIR` narrows the search but the
    picker still prefers the header cwd, so expect to use *All*; `pi --session
    <path>` avoids the question entirely.
@@ -94,7 +94,7 @@ Four traps, in the order they bite:
    One machine at a time, and let the sync settle before switching.
 3. **Auth does not travel.** Log in again on the Mac.
 4. **Only the JSONL export is a handoff.** `/export x.jsonl` writes a genuine
-   session file — one branch, `parentId` chain rewritten — that `/import x.jsonl`
+   session file — one branch, `parentId` chain rewritten (unverified) — that `/import x.jsonl`
    resumes. It lands outside any `--<cwd>--` bucket, so open it by path; `/export`
    to HTML is the readable artifact, not a handoff.
 
@@ -123,7 +123,8 @@ What it costs:
   Cloudflare, not in your repo, and you are pushing/pulling with git from inside
   the workspace. If you want your own host to stay the source of truth, you
   implement the remote environment.
-- Approval for tool calls does not exist yet, and a single model request that
+- No built-in approval for tool calls (a [`beforeTool` hook plus `api.memo`](https://earendil.com/posts/pi-durable/)
+  can provide one), and a single model request that
   streams longer than 15 minutes can be cut off by the alarm boundary. See
   [pi-durable-cloudflare.md](pi-durable-cloudflare.md#limits-cloudflare-documents).
 
@@ -150,7 +151,8 @@ environment deliberately.
 - Pi docs, `docs/sessions.md`, `docs/session-format.md`, `docs/slash-commands.md`
   (`/import`, `/export`, `/share`), `docs/configuration.md` (agent directory,
   `auth.json`) and `docs/tmux.md`, all in `@earendil-works/pi-coding-agent@1.4.0`
-  (installed locally)
+  (installed locally); `/share` targets and the *Current Folder* resume scope
+  checked in the package's `dist` source
 - Pi Durable announcement, execution environments and remote tools —
   <https://earendil.com/posts/pi-durable/>
 - Cloudflare Agents docs, Pi harness (recovery, alarm limits) —

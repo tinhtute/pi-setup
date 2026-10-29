@@ -5,8 +5,8 @@ through the Agents SDK, the hand-rolled route, the wake/alarm mapping that makes
 it work, and the limits Cloudflare documents.
 
 Background on the harness itself is in [pi-durable.md](pi-durable.md). Checked
-2026-10-28 against `@earendil-works/pi-durable@1.4.0` and the Agents SDK harness
-docs (`PiHarness`, beta).
+2026-10-29 against `@earendil-works/pi-durable@1.4.0`, `agents@0.31.0` and the
+Agents SDK harness docs (`PiHarness`, beta).
 
 ## Why the pairing makes sense
 
@@ -27,7 +27,8 @@ client ──▶ Worker ──▶ Durable Object (by session id)
 
 ## Route 1 — the Agents SDK `PiHarness` (supported, beta)
 
-`PiHarness` is a **Lifecycle capability**: a reusable piece of a Durable Object
+`PiHarness` ships in Cloudflare's `agents` package (`agents/harness/pi`), not in
+pi-durable. It is beta, and it is a **Lifecycle capability**: a reusable piece of a Durable Object
 that the Lifecycle starts and gives SQLite storage plus a durable job queue.
 
 ```ts
@@ -38,7 +39,7 @@ import { PiHarness } from "agents/harness/pi";
 import { Lifecycle } from "agents/lifecycle";
 import { createAI } from "agents/models/pi-ai";
 
-export class Assistant extends DurableObject {
+export class Assistant extends DurableObject<Env> {
   ai = createAI({ binding: this.env.AI });
   registry = createRegistry();
 
@@ -48,7 +49,7 @@ export class Assistant extends DurableObject {
       models.setProvider(this.ai.provider);
       return Harness.open(storage, { models, registry: this.registry, onWake }, context);
     },
-    defaults: { model: this.ai("@cf/zai-org/glm-5.3-flash") },
+    defaults: { model: this.ai("@cf/zai-org/glm-5.3-flash"), thinkingLevel: "low" },
   });
 
   lifecycle = Lifecycle.install(this).use(this.harness);
@@ -92,8 +93,10 @@ Pi minor, and Agents SDK 0.30.0 or later supports Pi 1.4.
 
 ## Route 2 — hand-rolled in a Durable Object
 
-Same storage adapter, no SDK. Earendil's own sample does this, and the README
-documents the contract:
+Same storage adapter, no SDK. The snippet below is from the pi-durable 1.4.0
+README, which documents the contract. Earendil's sample
+(`earendil-works/pi-durable-cloudflare`) opens differently: it sets no fallback
+alarm and rebuilds the alarm from `harness.inspect()` (see below).
 
 ```ts
 constructor(ctx: DurableObjectState, env: Env) {
@@ -112,7 +115,6 @@ constructor(ctx: DurableObjectState, env: Env) {
     // Armed before resume(): every call that can start work comes after the alarm.
     await this.#arm(this.#harness.wake());
     this.#harness.resume(); // continue any run the last process left unfinished
-    await this.#restoreEventStreams();
   });
 }
 ```
@@ -140,6 +142,9 @@ before designing anything on top.
   future deadlines set the alarm to the minimum, work that can run now gets a
   short recovery alarm, and the handler is idempotent because alarms are
   at-least-once.
+- The README's hand-rolled example arms a 60-second recovery heartbeat while
+  work runs. `agents` uses a 30-second constant (`HEARTBEAT_MS`) and waits on Pi
+  for at most 10 minutes per alarm (`WAIT_BUDGET_MS`).
 - The Agents SDK `PiHarness` does exactly this with a Lifecycle job: it holds a
   heartbeat while Pi works, is due when the next sleeping task wakes, and
   completes when Pi has nothing to do — which is what lets the object hibernate.
@@ -221,7 +226,8 @@ is fixed. `onReport` gets `task_parked` when a reporter is configured.
 
 ## Limits Cloudflare documents
 
-- No approval or permission step for tool calls.
+- No built-in approval or permission step for tool calls; build one with a
+  [`beforeTool` hook plus `api.memo`](https://earendil.com/posts/pi-durable/).
 - No event replay; reconnect means a new snapshot.
 - `abort()` waits until the session is idle.
 - An alarm invocation runs up to 15 minutes and the harness hands off every 10,
@@ -250,7 +256,7 @@ the source when it matters.
 ## Samples
 
 - `earendil-works/pi-durable-cloudflare` — the multiplayer chat from Earendil's
-  post: one DO per session, hibernatable WebSockets, multiple conversations and
+  post: one DO per session, pinned to pi-durable/pi-ai/chord **1.2.0** (not 1.4.0), hibernatable WebSockets, multiple conversations and
   forks, scheduled self-wake, a `search_history` subagent. Runs locally with Node
   22.19+, pnpm 11 and an OpenAI key in `.dev.vars`; **no authentication** on
   purpose.
@@ -271,6 +277,10 @@ Tracing for Pi Durable on Cloudflare and Node (`>=1.0.0 <2.0.0`, JS SDK 11.6.0+)
 
 ## Sources
 
+- `agents@0.31.0` npm package: `docs/harnesses/pi.md`, `dist/harness/pi`
+  (`HEARTBEAT_MS`, `WAIT_BUDGET_MS`)
+- Pi Durable announcement (approval via `beforeTool` + `api.memo`) —
+  <https://earendil.com/posts/pi-durable/>
 - Cloudflare Agents docs, Pi harness (primary) —
   <https://developers.cloudflare.com/agents/harnesses/pi/>
 - Cloudflare changelog, 2026-10-02 — <https://developers.cloudflare.com/changelog/post/2026-10-02-pi-harness/>

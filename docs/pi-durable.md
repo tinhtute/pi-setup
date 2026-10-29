@@ -4,7 +4,7 @@ Working note. What `@earendil-works/pi-durable` is, how its durability actually
 works, and what it does not do. Notes only — nothing here is installed by
 `setup/install.sh`, and Pi Durable does not replace the Pi coding agent.
 
-Checked against `@earendil-works/pi-durable@1.4.0` on 2026-10-28, the same
+Checked against `@earendil-works/pi-durable@1.4.0` on 2026-10-29, the same
 minor as the `@earendil-works/pi-coding-agent@1.4.0` this repo configures.
 
 ## What it is
@@ -137,15 +137,23 @@ repository.
 
 ## Limits
 
+Pi Durable itself:
+
 - Experimental; the API moves between releases.
-- No approval or permission step for tool calls.
-- No event replay: a stream always starts from a snapshot (more below, in the
-  Cloudflare note).
-- `abort()` waits until the session is idle; a tool that ignores its signal keeps
-  it busy.
+- No built-in approval or permission step for tool calls; build one with a
+  [`beforeTool` hook plus `api.memo`](https://earendil.com/posts/pi-durable/).
+- No event replay: a stream always starts from a snapshot.
+- `abort()` waits until the conversation is idle; a tool that ignores its signal
+  keeps it busy.
 - No conversation deletion.
 - TypeScript by choice ("the easiest way to bootstrap this"), with a Rust port
   not ruled out.
+
+Cloudflare `PiHarness` (Agents SDK, beta) adds its own, listed in
+[pi-durable-cloudflare.md](pi-durable-cloudflare.md#limits-cloudflare-documents):
+one model request streaming over 15 minutes can be cut off by the alarm
+boundary, background completion is noticed up to 30 seconds late, and a running
+session does not drain on eviction.
 
 ## Sources
 
@@ -153,3 +161,5 @@ repository.
 - `packages/durable/README.md` at tag `v1.4.0` —
   <https://github.com/earendil-works/pi/blob/v1.4.0/packages/durable/README.md>
 - npm — <https://www.npmjs.com/package/@earendil-works/pi-durable>
+- Cloudflare Agents docs, Pi harness (limitations) —
+  <https://developers.cloudflare.com/agents/harnesses/pi/>
