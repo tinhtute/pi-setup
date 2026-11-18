@@ -75,8 +75,8 @@ its five always-on tools plus the on-demand activation path cost more than plain
 choice and is synced here too, then vendored into `extensions/pi-pretty/` on 2026-10-23
 so its renderer could be changed.
 
-**Default model is `hive/deepseek-ai/deepseek-v4.1-flash-1017`** with high thinking, in
-both the template and on the machine.
+**Default model is `mistral/deepseek-v4-1-flash-1017`** with max thinking, in both the
+template and on the machine.
 
 hive is a custom provider: `config/models.json` declares its endpoint and model list but
 **no `apiKey`**. The key lives in `auth.json`, entered once with `/login` — the same place
@@ -85,8 +85,17 @@ to carry `apiKey: "$HIVE_API_KEY"`, which only resolved in the one shell that ex
 a `!get-secret.sh` command fixed that, and a stored credential replaced it afterwards.
 
 Because the credential comes from `auth.json` either way, a fresh clone needs one `/login`
-for hive before the default model resolves. `pi auth check --provider hive` reports
-readiness without printing the key.
+per provider it wants to use before those models resolve. `pi auth check --provider hive`
+reports readiness without printing the key.
+
+`mistral` is the other provider in use, and it is a built-in one: `pi-ai` ships the client
+and reads the `oauth` entry in `auth.json` like any other credential. What core does *not*
+ship is the flow — the sign-in against `console.mistral.ai` and the token refresh both live
+in `pi-mistral-subscription`, which is why that package stays in `packages`. Drop it and the
+account works until the access token expires, then strands, because nothing left can refresh
+it. The default model also survives without it only by luck: Pi's bundled catalog has no
+`deepseek-v4-1-flash-1017`, so the model arrives from the online catalog, with the package's
+overlay standing behind that.
 
 `config/models.json` also carries the `opencode-go` session-affinity compat overrides that
 keep that proxy channel on one backend.
