@@ -1,8 +1,8 @@
 {
-  "lastChangelogVersion": "1.4.0",
+  "lastChangelogVersion": "1.5.2",
   "theme": "system",
   "tuiMode": "fullscreen",
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "markdown": {
     "codeBlockIndent": "",
     "mermaid": "streaming"
@@ -16,7 +16,9 @@
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-subagents@0.81.0",
     "npm:@narumitw/pi-goal",
-    "extensions/pi-pretty"
+    "extensions/pi-pretty",
+    "https://github.com/5omeOtherGuy/pi-mistral-subscription",
+    "git:github.com/johnlindquist/pi-emphasis"
   ],
   "terminal": {
     "imageWidthCells": 60
@@ -24,7 +26,14 @@
   "images": {
     "blockImages": true
   },
-  "defaultProvider": "hive",
-  "defaultModel": "deepseek-ai/deepseek-v4.1-flash-1017",
-  "defaultThinkingLevel": "high"
+  "defaultProvider": "mistral",
+  "defaultModel": "deepseek-v4-1-flash-1017",
+  "defaultThinkingLevel": "max",
+  "steeringMode": "all",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.48.0",
+    "{\"source\":\"npm:pi-subagents@0.81.0\",\"scope\":\"user\"}": "0.81.0",
+    "{\"source\":\"extensions/pi-pretty\",\"scope\":\"user\"}": "0.8.0",
+    "{\"source\":\"npm:@narumitw/pi-goal\",\"scope\":\"user\"}": "0.55.3"
+  }
 }
