@@ -404,11 +404,19 @@ choice on 2026-10-22:
 | :--- | :--- |
 | `pi-antigravity` | the provider: Antigravity models plus `google_search` / `generate_image` |
 | `pi-web-access` | `web_search`, `fetch_content`, `source_check` |
-| `@juicesharp/rpiv-todo` | the `todo` tool (738 calls) |
+| `@tintinweb/pi-tasks` | `Task*` tools, task widget, `/tasks`; replaced `@juicesharp/rpiv-todo` on 2026-11-18 — `todo` measured 738 calls |
 | `@juicesharp/rpiv-ask-user-question` | `ask_user_question` (36 calls) |
 | `pi-subagents@0.81.0` | `subagent`, `bg_wait`, FleetView |
 | `@narumitw/pi-goal` | `goal_*` tools and `/goal` |
 | `@heyhuynhgiabuu/pi-pretty` | message and tool rendering (see below); re-registers `read`/`bash`/`find`/`grep`, owns no header or footer |
+
+`pi-tasks` runs standalone here: `TaskExecute` and auto-cascade speak
+`@tintinweb/pi-subagents`' RPC (`subagents:rpc:ping` / `:spawn` / `:consume`), while
+the `pi-subagents@0.81.0` above answers on `subagents:rpc:v1:*`. Until
+[tintinweb/pi-tasks#50](https://github.com/tintinweb/pi-tasks/issues/50) lands an
+adapter, those two tools report that no subagent backend is present. Task storage
+is set to `session-global` in `~/.pi/agent/tasks-config.json`, so task files live
+under the agent dir instead of a `.pi/tasks/` in every repository.
 
 Dropped, and why they should not come back without a measurement:
 

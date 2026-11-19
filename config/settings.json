@@ -13,7 +13,7 @@
     "npm:pi-antigravity",
     "npm:pi-web-access",
     "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:@juicesharp/rpiv-todo",
+    "npm:@tintinweb/pi-tasks",
     "npm:pi-subagents@0.81.0",
     "npm:@narumitw/pi-goal",
     "extensions/pi-pretty",

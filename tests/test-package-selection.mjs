@@ -19,7 +19,7 @@ const expected = [
 	"npm:pi-antigravity",
 	"npm:pi-web-access",
 	"npm:@juicesharp/rpiv-ask-user-question",
-	"npm:@juicesharp/rpiv-todo",
+	"npm:@tintinweb/pi-tasks",
 	"npm:pi-subagents@0.81.0",
 	"npm:@narumitw/pi-goal",
 	// Vendored 2026-10-23: pi-pretty was forked into extensions/pi-pretty so its

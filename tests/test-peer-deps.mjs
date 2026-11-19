@@ -21,7 +21,7 @@ const sources = settings.packages.map((entry) => (typeof entry === "string" ? en
 // module graph cannot load until the peer is installed next to it.
 const PEER_REQUIRED = [
 	{ matches: /rpiv-ask-user-question/, peer: "typebox" },
-	{ matches: /rpiv-todo/, peer: "typebox" },
+	{ matches: /pi-tasks/, peer: "typebox" },
 ];
 
 const needed = new Set();

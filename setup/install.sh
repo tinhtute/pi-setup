@@ -301,7 +301,7 @@ fi
 PEER_DIR="$PI_DIR/npm"
 peer_dep_for_package() {
   case "$1" in
-    *rpiv-ask-user-question*|*rpiv-todo*|*rpiv-config*) echo "typebox" ;;
+    *rpiv-ask-user-question*|*rpiv-config*|*pi-tasks*) echo "typebox" ;;
     *) echo "" ;;
   esac
 }
