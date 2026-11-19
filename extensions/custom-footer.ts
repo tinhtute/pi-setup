@@ -1,19 +1,12 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
-// Compact footer that reproduces the segment structure, thresholds and colors of
-// ~/.claude/statusline.sh. Colors are fixed ANSI, not theme tokens: that script hardcodes
-// them, and the owner asked for byte-level parity rather than theme adaptation.
-const R = "\x1b[0m";
-const DIM = "\x1b[38;5;247m";
-const MODEL = "\x1b[38;5;208m";
-const EFFORT = "\x1b[35m";
-const TPM = "\x1b[93m";
-const BRANCH = "\x1b[36m";
-const GREEN = "\x1b[92m";
-const YELLOW = "\x1b[93m";
-const RED = "\x1b[91m";
-const COLD = "\x1b[94m";
+import { type Level, type PaletteTheme, type PaletteSlot, levelToken, paint } from "./tui-palette/palette.ts";
+
+// Compact footer that keeps the segment structure, thresholds and glyphs of
+// ~/.claude/statusline.sh but takes every colour from the active pi theme, through
+// `tui-palette`. It used to hardcode nine 256-colour escapes for byte parity with that
+// script; the owner replaced that rule with "one accent from the theme" on 2026-11-19.
 const SEP = " · ";
 
 const BAR_CELLS = 8;
@@ -67,12 +60,6 @@ function weatherIcon(used: number): string {
 	return "☀";
 }
 
-function contextAnsi(used: number): string {
-	if (used >= 75) return RED;
-	if (used >= 50) return YELLOW;
-	return DIM;
-}
-
 /** CC's fill arithmetic is `floor(used * 8 / 100)` where `used` was already floored, capped at 8 cells. */
 function contextBar(used: number): string {
 	const filled = Math.min(BAR_CELLS, Math.floor((used * BAR_CELLS) / 100));
@@ -91,56 +78,67 @@ function label(text: string): string {
 	return text.replace(/[\x00-\x1f\x7f-\x9f]/g, "");
 }
 
-/** Pure render of one footer line. Every segment mirrors `statusline.sh`. */
-export function renderFooter(snapshot: FooterSnapshot): string {
+/** Context pressure, in the three registers the footer paints with. */
+function contextLevel(used: number): Level {
+	if (used >= 75) return "high";
+	if (used >= 50) return "warn";
+	return "quiet";
+}
+
+/**
+ * Pure render of one footer line. Every segment keeps the glyphs and thresholds of
+ * `statusline.sh`; only the colours move, and they come from `theme`.
+ */
+export function renderFooter(snapshot: FooterSnapshot, theme?: PaletteTheme): string {
+	const fg = (slot: PaletteSlot, text: string): string => paint(theme, slot, text);
+
 	// CC's jq reads `used_percentage // 0`, so an unknown percentage prints as 0%.
 	const raw = typeof snapshot.contextPercent === "number" && Number.isFinite(snapshot.contextPercent)
 		? snapshot.contextPercent
 		: 0;
 	const used = Math.max(0, Math.min(100, Math.floor(raw)));
-	let out = `${MODEL}👾 ${label(snapshot.model)}${R}`;
+	let out = fg("accent", `👾 ${label(snapshot.model)}`);
 
 	// CC omits the effort segment when `.effort.level` is absent; "off" means no effort too.
 	const effort = snapshot.effort;
-	if (effort && effort !== "off") out += `${SEP}${EFFORT}${label(effort)}${R}`;
+	if (effort && effort !== "off") out += `${SEP}${fg("muted", label(effort))}`;
 
-	out += `${SEP}${contextAnsi(used)}${weatherIcon(used)}  ${contextBar(used)} ${used}%${R}`;
+	out += `${SEP}${fg(levelToken(contextLevel(used)), `${weatherIcon(used)}  ${contextBar(used)} ${used}%`)}`;
 
 	if (Number.isFinite(snapshot.tpmOutputTokens) && snapshot.tpmOutputTokens > 0
 		&& Number.isFinite(snapshot.tpmDurationMs) && snapshot.tpmDurationMs > 0) {
 		const tpm = Math.floor((snapshot.tpmOutputTokens * 60000) / snapshot.tpmDurationMs);
-		if (tpm > 0) out += `${SEP}${TPM}ϟ${R} ${DIM}${formatTpm(tpm)} tpm${R}`;
+		if (tpm > 0) out += `${SEP}${fg("accent", "ϟ")} ${fg("dim", `${formatTpm(tpm)} tpm`)}`;
 	}
 
 	const cache = snapshot.cache;
 	if (cache.hit !== undefined && Number.isFinite(cache.hit)) {
 		const hit = Math.floor(Math.max(0, Math.min(100, cache.hit)));
-		const ansi = hit >= 90 ? GREEN : hit >= 70 ? YELLOW : RED;
-		out += `${SEP}${ansi}★ ${hit}%${R}`;
+		out += `${SEP}${fg(hit >= 90 ? "success" : hit >= 70 ? "warning" : "error", `★ ${hit}%`)}`;
 
 		const nowSec = Math.floor(snapshot.now / 1000);
 		const expiresAt = cache.expiresAt;
 		if (typeof expiresAt === "number" && Number.isFinite(expiresAt) && expiresAt > nowSec) {
-			out += ` ${DIM}◷ ${Math.floor((expiresAt - nowSec + 59) / 60)}m${R}`;
+			out += ` ${fg("dim", `◷ ${Math.floor((expiresAt - nowSec + 59) / 60)}m`)}`;
 		} else {
-			out += ` ${COLD}❄ cold${R}`;
+			out += ` ${fg("muted", "❄ cold")}`;
 		}
 
 		if (cache.misses > 0) {
-			let ansi = RED;
+			let slot: PaletteSlot = "error";
 			let suffix = "";
 			if (typeof cache.lastMissAt === "number" && snapshot.now - cache.lastMissAt < MISS_LABEL_FRESH_MS) {
 				const cause = causeLabel(cache.lastMissCause);
 				if (cause) suffix = ` ${cause}`;
-				if (cache.lastMissCause?.startsWith("ttl_expired")) ansi = YELLOW;
+				if (cache.lastMissCause?.startsWith("ttl_expired")) slot = "warning";
 			} else {
-				ansi = DIM;
+				slot = "dim";
 			}
-			out += ` ${ansi}✗${cache.misses}${suffix}${R}`;
+			out += ` ${fg(slot, `✗${cache.misses}${suffix}`)}`;
 		}
 	}
 
-	if (snapshot.branch) out += `${SEP}${BRANCH}⌥ ${label(snapshot.branch)}${R}`;
+	if (snapshot.branch) out += `${SEP}${fg("accent", `⌥ ${label(snapshot.branch)}`)}`;
 
 	return out;
 }
@@ -222,7 +220,7 @@ export default function (pi: ExtensionAPI) {
 	const applyFooter = (ctx: ExtensionContext): void => {
 		if (ctx.mode !== "tui") return;
 
-		ctx.ui.setFooter((tui, _theme, footerData) => {
+		ctx.ui.setFooter((tui, theme, footerData) => {
 			const requestRender = () => tui.requestRender();
 			const unsubscribe = [
 				footerData.onBranchChange(requestRender),
@@ -292,7 +290,7 @@ export default function (pi: ExtensionAPI) {
 						},
 						branch: footerData.getGitBranch(),
 						now: Date.now(),
-					}), Math.max(0, width))];
+					}, theme), Math.max(0, width))];
 				},
 			};
 		});

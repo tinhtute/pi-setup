@@ -46,6 +46,45 @@ for (const [label, configPath] of [
 assert.equal(readJson("config/settings.json").theme, "system", "the repo default theme is system");
 
 // ---------------------------------------------------------------------------
+// 1b. Code blocks follow a Shiki theme this build actually ships.
+//
+// The renderer validates the name against Shiki's bundled themes and falls back to
+// `github-dark` with a one-time warning on anything else. `theme: "system"` in Pi's
+// settings is a TUI appearance, not a Shiki name, so leaving `theme` unset here is the
+// silent-fallback bug this section pins: reads rendered in GitHub's palette under a
+// violet terminal.
+// ---------------------------------------------------------------------------
+const { createRequire } = await import("node:module");
+let bundledThemes;
+try {
+	const fromExtension = createRequire(new URL("../extensions/pi-pretty/package.json", import.meta.url));
+	bundledThemes = fromExtension("shiki").bundledThemes;
+} catch {
+	bundledThemes = undefined;
+}
+if (bundledThemes) {
+	for (const [label, configPath] of [
+		["repo", "config/pi-pretty.json"],
+		["live", path.join(homedir(), ".pi/agent/pi-pretty.json")],
+	]) {
+		if (label === "live" && !existsSync(configPath)) continue;
+		const config = JSON.parse(readFileSync(configPath, "utf8"));
+		assert.equal(typeof config.theme, "string", `${label}: pi-pretty.json must name a Shiki theme`);
+		assert(
+			Object.hasOwn(bundledThemes, config.theme),
+			`${label}: "${config.theme}" is not a bundled Shiki theme, so reads would fall back to github-dark`,
+		);
+	}
+	assert.notEqual(
+		readJson("config/pi-pretty.json").theme,
+		"github-dark",
+		"the repo names its own Shiki theme instead of leaning on the fallback",
+	);
+} else {
+	console.log("SKIP: shiki is not installed under extensions/pi-pretty; the Shiki theme name is unchecked");
+}
+
+// ---------------------------------------------------------------------------
 // 2. The banner owns the rainbow; it must not drift onto theme colours.
 // ---------------------------------------------------------------------------
 const banner = read("extensions/custom-banner.ts");
@@ -61,6 +100,31 @@ assert(!/theme\.colors\.accent/.test(banner), "the banner must not derive its co
 const palette = read("extensions/pi-pretty/src/indicator/palette.ts");
 assert.match(palette, /const hex = hexToAnsiFg\(value\);/, "an explicit hex still wins for low/mid/high");
 assert.match(read("extensions/pi-pretty/src/indicator/settings.ts"), /palette: \{ low: "dim", mid: "muted", high: "accent" \}/);
+
+// Every status surface reaches the same register through `tui-palette`. The footer used
+// to own nine 256-colour escapes, and the confirm dialog its own contrast rule; both now
+// ask the palette, so the assertions below are about absence plus one import each.
+for (const [file, importer] of [
+	["extensions/custom-footer.ts", /\.\/tui-palette\/palette\.ts/],
+	["extensions/confirm-guard/box.ts", /\.\.\/tui-palette\/palette\.ts/],
+]) {
+	const src = read(file);
+	assert.match(src, importer, `${file} must paint through tui-palette`);
+	const code = src
+		.split("\n")
+		.filter((line) => {
+			const trimmed = line.trim();
+			return !(trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*"));
+		})
+		.join("\n");
+	// A bare reset (`\x1b[0m`) is structure, not palette: `truncate()` needs it after an
+	// ellipsis. Only colour-setting SGR codes are forbidden.
+	assert(
+		!/\\x1b\[(?:3[0-9]|4[0-9]|9[0-9]|38;|48;)/.test(code),
+		`${file} must not carry a colour escape sequence outside its comments`,
+	);
+	assert(!/#[0-9a-fA-F]{6}\b/.test(code), `${file} must not carry a hex colour outside its comments`);
+}
 
 // The theme-derived ramp is what ships, and every consumer must resolve it — a raw
 // sentinel would reach the interpolator as a string.

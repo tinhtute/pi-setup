@@ -13,20 +13,51 @@ const { createJiti } = await load(jitiEntry);
 const jiti = createJiti(import.meta.url, { alias: piAliases });
 const mod = await jiti.import(resolve("extensions/custom-footer.ts"));
 const extension = mod.default;
-const { renderFooter } = mod;
+const { renderFooter: renderFooterRaw } = mod;
 const { visibleWidth } = await load(pkgFile("pi-tui", "dist/index.js"));
 const plain = (text) => text.replace(/\x1b\[[0-9;]*m/g, "");
 
 const R = "\x1b[0m";
-const DIM = "\x1b[38;5;247m";
-const MODEL = "\x1b[38;5;208m";
-const EFFORT = "\x1b[35m";
-const TPM = "\x1b[93m";
-const BRANCH = "\x1b[36m";
-const GREEN = "\x1b[92m";
-const YELLOW = "\x1b[93m";
-const RED = "\x1b[91m";
-const COLD = "\x1b[94m";
+
+// The footer paints through `tui-palette`, so the test supplies a theme and reads the
+// slots back. Each token gets a distinct escape, which keeps a slot assertion able to
+// fail when two segments collapse onto the same colour. The names below are the old
+// byte-parity constants: the glyphs, separators, thresholds and widths they guarded in
+// every assertion further down are unchanged, only their escape now comes from a slot.
+const SLOT_ANSI = {
+	accent: "\x1b[38;5;213m",
+	border: "\x1b[38;5;111m",
+	text: "\x1b[39m",
+	muted: "\x1b[38;5;247m",
+	dim: "\x1b[38;5;245m",
+	success: "\x1b[92m",
+	warning: "\x1b[93m",
+	error: "\x1b[91m",
+};
+let slotCalls = [];
+const fakeTheme = {
+	fg(slot, text) {
+		assert.ok(slot in SLOT_ANSI, `the footer asked for an unknown palette slot: ${slot}`);
+		slotCalls.push(slot);
+		return `${SLOT_ANSI[slot]}${text}${R}`;
+	},
+};
+const renderFooter = (snapshot) => renderFooterRaw(snapshot, fakeTheme);
+const slotsFor = (snapshot) => {
+	slotCalls = [];
+	renderFooterRaw(snapshot, fakeTheme);
+	return new Set(slotCalls);
+};
+
+const MODEL = SLOT_ANSI.accent;
+const EFFORT = SLOT_ANSI.muted;
+const TPM = SLOT_ANSI.accent;
+const BRANCH = SLOT_ANSI.accent;
+const GREEN = SLOT_ANSI.success;
+const YELLOW = SLOT_ANSI.warning;
+const RED = SLOT_ANSI.error;
+const COLD = SLOT_ANSI.muted;
+const DIM = SLOT_ANSI.dim;
 const SEP = " · ";
 
 const weather = (used) => used >= 90 ? "↯" : used >= 75 ? "☇" : used >= 50 ? "☂" : used >= 25 ? "☁" : "☀";
@@ -240,7 +271,7 @@ async function harness({ promptCache = { short: 300, long: 3600 } } = {}) {
 			setFooter(factory) {
 				state.footerCalls++;
 				state.header?.dispose();
-				state.header = factory?.({ requestRender: () => state.renders++ }, undefined, {
+				state.header = factory?.({ requestRender: () => state.renders++ }, fakeTheme, {
 					getGitBranch: () => state.branch,
 					onBranchChange(handler) {
 						branchListeners.add(handler);
@@ -399,4 +430,27 @@ async function harness({ promptCache = { short: 300, long: 3600 } } = {}) {
 	globalThis.clearInterval = realClear;
 }
 
-process.stdout.write("PASS cc-parity layout, colors, thresholds, tpm, cache ledger, timer, commands\n");
+// ---------------------------------------------------------------------------
+// R3: every colour is a palette slot, and the slot — not the escape — is the contract.
+// ---------------------------------------------------------------------------
+{
+	const hit = (value) => ({ hit: value, expiresAt: undefined, misses: 0, lastMissAt: undefined, lastMissCause: undefined });
+	assert(slotsFor({ ...baseSnapshot, cache: hit(95) }).has("success"), "a healthy cache hit reads success");
+	assert(slotsFor({ ...baseSnapshot, cache: hit(85) }).has("warning"), "a 70-89% hit reads warning");
+	assert(slotsFor({ ...baseSnapshot, cache: hit(40) }).has("error"), "a sub-70% hit reads error");
+	assert(slotsFor({ ...baseSnapshot, contextPercent: 80 }).has("error"), "context pressure above 75 reads error");
+	assert(slotsFor({ ...baseSnapshot, contextPercent: 60 }).has("warning"), "context pressure 50-74 reads warning");
+	assert(slotsFor({ ...baseSnapshot, contextPercent: 10 }).has("dim"), "context pressure under 50 rests on dim");
+	assert(slotsFor({ ...baseSnapshot, branch: "main" }).has("accent"), "the model and the branch read accent");
+	assert(slotsFor({ ...baseSnapshot, effort: "high" }).has("muted"), "effort reads muted");
+	assert(!slotsFor(baseSnapshot).has("border"), "the footer never needs the one contrast fallback token");
+
+	// No theme at all (print/json surfaces, or a host that passes none): same glyphs,
+	// no escape codes, nothing to strip.
+	const bare = renderFooterRaw({ ...baseSnapshot, contextPercent: 42, effort: null, branch: null }, undefined);
+	assert(!/\x1b\[/.test(bare), `no theme must mean no escape codes, got ${JSON.stringify(bare)}`);
+	assert(plain(bare).includes("☁"), "the weather glyph survives without a theme");
+	assert(plain(bare).endsWith(" 42%"), "the percentage survives without a theme");
+}
+
+process.stdout.write("PASS cc-parity layout, palette slots, thresholds, tpm, cache ledger, timer, commands\n");

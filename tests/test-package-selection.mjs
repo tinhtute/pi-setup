@@ -28,8 +28,34 @@ const expected = [
 	// own (it re-registers read/edit) and owns neither ctx.ui.setHeader nor
 	// ctx.ui.setFooter, so custom-banner.ts and custom-footer.ts keep their jobs.
 	"extensions/pi-pretty",
+	// pi-emphasis draws the reply contract (`[[Done]]` pills, label icons, tree lines).
+	// It stays a git package rather than a vendored copy (owner's call, 2026-11-19) but
+	// is pinned to a commit: the branch tip used to be whatever upstream pushed last.
+	"git:github.com/johnlindquist/pi-emphasis@f884b736c489944ee778ab951c7f78580f137b02",
 ];
 assert.deepEqual([...sources].sort(), [...expected].sort(), "the package list is exactly the tracked set");
+
+// A git or URL package must name the commit or tag it resolves to. Without a ref pi
+// reconciles to the remote branch tip on every start, so the machine silently runs
+// whatever upstream pushed; the reply contract is not something to take on drift.
+for (const source of sources) {
+	if (!source.startsWith("git:") && !source.startsWith("https://")) continue;
+	assert.match(
+		source,
+		/@(?:[0-9a-f]{40}|v?\d+\.\d+\.\d+)$/,
+		`a git package must be pinned to a commit or a tag: ${source}`,
+	);
+}
+
+// The reply-style contract has exactly one home: the extension above. The repo once
+// carried it in a global AGENTS.md; a 0-byte leftover was still installed and read as
+// "no instructions" while the extension supplied the real rules, which is the ambiguity
+// this pins away.
+assert(!existsSync(new URL("../AGENTS.md", import.meta.url)), "the repo must not ship an AGENTS.md");
+assert(
+	!readFileSync(new URL("../setup/install.sh", import.meta.url), "utf8").includes("AGENTS.md"),
+	"install.sh must not install an AGENTS.md",
+);
 
 // Each of these was removed on 2026-10-21 after measuring real tool usage: browser-use
 // alone contributed 34 of 71 tools for 23 lifetime calls.

@@ -18,7 +18,7 @@
     "npm:@narumitw/pi-goal",
     "extensions/pi-pretty",
     "https://github.com/5omeOtherGuy/pi-mistral-subscription",
-    "git:github.com/johnlindquist/pi-emphasis"
+    "git:github.com/johnlindquist/pi-emphasis@f884b736c489944ee778ab951c7f78580f137b02"
   ],
   "terminal": {
     "imageWidthCells": 60

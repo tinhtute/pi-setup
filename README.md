@@ -306,26 +306,28 @@ Code renders, driven by Pi's own session data:
 👾 Opus 5.5 · high · ☂  ━━━───── 42% · ϟ 2.4k tpm · ★ 85% ◷ 5m · ⌥ main
 ```
 
-Segment order, thresholds, spacing, and colors are copied from
-`~/.claude/statusline.sh`, so the two lines are interchangeable. Colors are
-fixed ANSI rather than theme tokens — that script hardcodes them, and matching it
-byte for byte takes precedence over theme adaptation. Light terminals inherit
-Claude Code's readability, not Pi's theme's.
+Segment order, thresholds, spacing, and glyphs come from `~/.claude/statusline.sh`, so the
+two lines stay interchangeable. Colours do not: each segment asks
+`extensions/tui-palette/palette.ts` for a pi theme token, so `/theme` repaints the footer
+and it can never disagree with the working indicator, the banner's neighbours, or the
+confirm dialog. Until 2026-11-19 the footer hardcoded nine 256-colour escapes to match the
+script byte for byte; that rule is gone (see `docs/plans/done/` for the parity-era notes
+and `.monows/plans/active/tui-palette-contract.md` for the replacement).
 
-- `👾 model` (palette 208) then `effort` (ANSI 35). The effort segment is dropped
+- `👾 model` in the theme's `accent`, then `effort` in `muted`. The effort segment is dropped
   when Pi reports no thinking level or `off`, exactly as the script drops an
   absent `.effort.level`.
 - Context is one monochromatic segment: a weather icon (`☀` <25, `☁` <50, `☂` <75,
   `☇` <90, `↯` 90+) plus an eight-cell bar and the percentage. Fill is
   `floor(percent) * 8 / 100` cells, so it sits one cell lower than rounding would
-  put it near a boundary. Color is ANSI 247 below 50%, 93 from 50%, 91 from 75%.
+  put it near a boundary. Colour is `dim` below 50%, `warning` from 50%, `error` from 75%.
   An unknown percentage renders as `0%`, matching the script's `// 0` default.
 - `ϟ N tpm` is **output tokens over summed API duration** — `Σ output_tokens /
   Σ durationMs` across assistant messages on the active branch, deduplicated by
   response id. Auxiliary usage entries (cache warming) are excluded. It is hidden
   when either side is zero. Formatting follows Claude: `999`, `1.0k`, `10k`.
 - `★ N%` is the latest assistant's `cacheRead / (input + cacheRead + cacheWrite)`,
-  floored to a whole percent: green from 90%, yellow from 70%, red below.
+  floored to a whole percent: `success` from 90%, `warning` from 70%, `error` below.
 - `◷ Nm` counts down from that response's timestamp plus the model's declared
   `promptCache` lifetime (`long` when the response wrote 1h-safe tokens). `❄ cold`
   replaces it when the lifetime has passed or the model declares none.
@@ -334,7 +336,7 @@ Claude Code's readability, not Pi's theme's.
   `server`, else the raw cause. A miss older than ten minutes loses its label and
   turns dim. A prefix rebuild announced by compaction or a branch summary is not a
   miss.
-- `⌥ branch` in ANSI 36, omitted outside a Git repository.
+- `⌥ branch` in the theme's `accent`, omitted outside a Git repository.
 
 The cache fields are a heuristic, not Claude Code's ledger: Pi exposes no
 prompt-cache accounting, so the extension reconstructs misses from the transcript
@@ -475,6 +477,7 @@ otherwise prints a diff — the live file is the one a person tunes:
 
 ```json
 {
+  "theme": "catppuccin-mocha",
   "workingIndicator": {
     "enabled": true, "text": ["Working…"], "mode": "shimmer",
     "low": "dim", "stops": "theme", "bold": true,
@@ -490,13 +493,47 @@ style and its key are gone, so the template no longer ships it.
 
 `icons` and `PRETTY_ICONS` went with the `ls` renderer: pi-pretty draws no tree view any
 more, so there is no icon table left to switch off and the extension needs no Nerd Font.
-`theme` only drives the `read` preview — `settings.json`'s `theme: "system"` is not a Shiki
-name, so the default `github-dark` applies. Diffs are **not** covered: that needs the
+`theme` drives the `read` preview's syntax highlighting and must name a **bundled Shiki**
+theme: the renderer validates the name and falls back to `github-dark`, with a one-time
+warning, on anything else. It shipped unset for a while, and because `settings.json`'s
+`theme: "system"` is not a Shiki name, every read rendered in GitHub's palette under a
+violet terminal. The template now names `catppuccin-mocha` — of Shiki's 65 bundled themes,
+the one whose mauve sits closest to the generated `system` accent — and
+`tests/test-palette-theme.mjs` fails when the key is missing or names something Shiki does
+not ship. Diffs are **not** covered: that needs the
 companion `@heyhuynhgiabuu/pi-diff`. It owns neither the header nor the footer, so
 `custom-banner.ts` and `custom-footer.ts` keep their jobs, and its editor extends Pi's
 `CustomEditor`, which keeps `dollar-skill.ts`'s `$skill` autocomplete.
 
 Remove it with `pi remove npm:@heyhuynhgiabuu/pi-pretty` and drop the template entry.
+
+For extension work, the most complete distillation going is `.claude/skills/pi-plugin-dev` in
+[`fredcamaral/drawers`](https://github.com/fredcamaral/drawers) — extension API, event
+contract, UI surfaces, traps, testing and publishing, with references distilled from a pinned
+pi snapshot. That repository carries **no licence**, so it is a reading reference and not an
+installed skill; Pi's own `docs/extensions.md` and `docs/tui.md` stay the source of truth, and
+the installed pi version wins over any citation.
+
+### Reply style and pills (pi-emphasis)
+
+`git:github.com/johnlindquist/pi-emphasis` is the one TUI dependency this repo does not
+vendor. It stays a git package — the owner's call on 2026-11-19 — pinned to commit
+`f884b73` so an upstream push cannot change how replies look mid-week; a test fails if any
+`git:` package loses its commit or tag. It draws `[[Done]]` / `[[Failed]]` pills, an icon
+per lead label, bold anchors, `→` arrows and `├──` tree lines, and it supplies the contract
+that used to live in a global `AGENTS.md`: label every reply, name states with a fixed pill
+vocabulary, and give every red or yellow pill the action it needs.
+
+`~/.pi/agent/AGENTS.md` was emptied when that contract moved into the extension, so the
+file is 0 bytes on this machine. Nothing in this repo installs an `AGENTS.md`, and
+`tests/test-package-selection.mjs` keeps it that way: two homes for one contract is how the
+file ends up contradicting the renderer.
+
+Both the footer and the confirm dialog paint through `extensions/tui-palette/palette.ts`,
+which is a library rather than an extension — its `index.ts` registers nothing and exists
+only so `install.sh`'s directory loop ships it. The banner is deliberately outside that
+palette: its rainbow is a signature, and `tests/test-palette-theme.mjs` pins every one of
+its five colours.
 
 ### Parallel subagents and goals
 
@@ -541,14 +578,18 @@ come from pi-ai's client identity. No extension in this repo reads them.
 pi-setup/
 ├── config/
 │   ├── models.json
+│   ├── pi-pretty.json
 │   ├── settings.json
 │   └── web-search.example.json
 ├── extensions/
 │   ├── account-pool/          # /pool
+│   ├── confirm-guard/         # dim-rail permission dialog
 │   ├── custom-banner.ts
 │   ├── custom-footer.ts
 │   ├── dollar-skill.ts
-│   └── rewind/                # /rewind
+│   ├── pi-pretty/             # vendored renderer fork
+│   ├── rewind/                # /rewind
+│   └── tui-palette/           # theme tokens, shared; registers nothing
 ├── scripts/
 │   ├── get-secret.sh
 │   └── test-custom-footer.mjs
@@ -562,6 +603,7 @@ pi-setup/
     ├── test-custom-footer.mjs
     ├── test-get-secret.mjs
     ├── test-package-selection.mjs
+    ├── test-palette-theme.mjs
     ├── test-peer-deps.mjs
     ├── test-rewind.mjs
     ├── test-web-search-config.mjs

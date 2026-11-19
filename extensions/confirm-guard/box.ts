@@ -35,6 +35,8 @@
 import { matchesKey, type Component } from "@earendil-works/pi-tui";
 import type { KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
 
+import { emphasis } from "../tui-palette/palette.ts";
+
 export interface ConfirmBoxOptions {
 	/** The pattern that matched, e.g. `git push`. */
 	pattern: string;
@@ -67,21 +69,6 @@ function contentWidth(width: number): number {
 function visibleWidth(text: string): number {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching SGR on purpose
 	return [...text.replace(/\x1b\[[0-9;]*m/g, "")].length;
-}
-
-/**
- * WCAG relative luminance of a token, or `NaN` when the token is not RGB -- an indexed
- * 256-colour accent carries `kind` but no channels, and there is nothing to compare
- * then. Only used to decide whether an accent can carry emphasis over the rail.
- */
-function luminance(color: unknown): number {
-	const { r, g, b } = (color ?? {}) as { r?: number; g?: number; b?: number };
-	if (typeof r !== "number" || typeof g !== "number" || typeof b !== "number") return Number.NaN;
-	const channel = (value: number): number => {
-		const n = value / 255;
-		return n <= 0.03928 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4;
-	};
-	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 
 /** Cut a styled line to `limit` visible columns, marking the cut with an ellipsis. */
@@ -142,23 +129,12 @@ export class ConfirmBox implements Component {
 	}
 
 	/**
-	 * The emphasis register: the theme's accent, which is the colour the operator reads as
-	 * the theme's primary colour. One exception keeps it legible -- a theme whose accent is
-	 * darker than its own dim (the bundled `cyan` theme ships #4d788e against #7e888e)
-	 * would make the title and the selection look disabled, so `border`, the bright frame
-	 * colour in exactly those themes, takes over. An indexed accent has no channels to
-	 * compare and is simply used.
+	 * The emphasis register comes from `tui-palette`, so this dialog and the footer cannot
+	 * drift onto different accents. The contrast rule that used to live here -- a theme
+	 * whose accent is darker than its own dim hands emphasis to `border` -- moved with it.
 	 */
 	private emphasis(text: string): string {
-		const { theme } = this;
-		const accent = theme.colors?.accent;
-		const dim = theme.colors?.dim;
-		const accentLuminance = luminance(accent);
-		const dimLuminance = luminance(dim);
-		if (Number.isNaN(accentLuminance) || Number.isNaN(dimLuminance) || accentLuminance >= dimLuminance) {
-			return theme.fg("accent", text);
-		}
-		return theme.fg("border", text);
+		return emphasis(this.theme, text);
 	}
 
 	render(width: number): string[] {

@@ -92,6 +92,14 @@ missing or out of scope.
 
 ## Progress
 
+Round 5 — **done** (2026-11-19): no renderer changed. The four Pi SDK devDependencies moved
+from `1.3.0` to `1.5.2` to match the host this machine runs (`pi 1.5.2`), and nothing else in
+`src/` moved: `npx tsc --noEmit` clean, `npx biome check src/` 0 errors / 22 warnings (the
+round-4 count), `npx vitest run` 256 tests across 21 files, unchanged. Two palette surfaces
+left this fork at the same time: the footer and the confirm dialog now paint through
+`extensions/tui-palette/palette.ts`, and `config/pi-pretty.json` names `catppuccin-mocha`
+so `read` highlighting stops falling back to `github-dark` under a violet terminal.
+
 Round 4 — **done**: the dead code the table never listed. `bash`, `find`, `grep` and `read`
 grew their own renderers under `tools/`, leaving `renderBashOutput`, `renderGrepResults`,
 `makeRenderCall`, `makeRenderResult`, `renderToolMetrics`, `lnum` and `getTextContent`
