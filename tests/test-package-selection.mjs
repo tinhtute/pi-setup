@@ -28,6 +28,10 @@ const expected = [
 	// own (it re-registers read/edit) and owns neither ctx.ui.setHeader nor
 	// ctx.ui.setFooter, so custom-banner.ts and custom-footer.ts keep their jobs.
 	"extensions/pi-pretty",
+	// The mistral subscription plugin is the default provider's sign-in route. It is a URL
+	// source, not `git:`, so it carries no ref: see the pin assertion below for why the two
+	// forms are treated differently.
+	"https://github.com/5omeOtherGuy/pi-mistral-subscription",
 	// pi-emphasis draws the reply contract (`[[Done]]` pills, label icons, tree lines).
 	// It stays a git package rather than a vendored copy (owner's call, 2026-11-19) but
 	// is pinned to a commit: the branch tip used to be whatever upstream pushed last.
@@ -35,11 +39,15 @@ const expected = [
 ];
 assert.deepEqual([...sources].sort(), [...expected].sort(), "the package list is exactly the tracked set");
 
-// A git or URL package must name the commit or tag it resolves to. Without a ref pi
+// A `git:` package must name the commit or tag it resolves to. Without a ref pi
 // reconciles to the remote branch tip on every start, so the machine silently runs
 // whatever upstream pushed; the reply contract is not something to take on drift.
+//
+// The rule stops at `git:` on purpose. Pi documents `git:host/repo@ref` as the pinnable
+// form; the URL source above has no documented ref syntax, so it follows the default
+// branch by design and pinning it would mean changing how it resolves.
 for (const source of sources) {
-	if (!source.startsWith("git:") && !source.startsWith("https://")) continue;
+	if (!source.startsWith("git:")) continue;
 	assert.match(
 		source,
 		/@(?:[0-9a-f]{40}|v?\d+\.\d+\.\d+)$/,
@@ -129,12 +137,17 @@ assert.equal(existsSync(new URL("../themes/cyan.json", import.meta.url)), true,
 // IME composition anchored) instead of hiding it and painting a reverse-video block.
 assert.equal(settings.showHardwareCursor, true,
 	"the terminal draws the cursor, not Pi's fake block cursor");
-assert.equal(settings.lastChangelogVersion, "1.4.0");
-// Default is hive because its credential comes from auth.json via /login, exactly like
-// opencode-go's — neither is committed, so neither is more portable than the other.
-assert.equal(settings.defaultProvider, "hive");
-assert.equal(settings.defaultModel, "deepseek-ai/deepseek-v4.1-flash-1017");
-assert.equal(settings.defaultThinkingLevel, "high");
+// The template mirrors the machine it was synced from. These values moved on
+// 2026-11-19 (pi 1.5.2, the mistral subscription provider) without this file following,
+// which left origin/main red; the assertions now name what the template actually ships.
+assert.equal(settings.lastChangelogVersion, "1.5.2");
+// Default is the mistral subscription provider, reached through that plugin's OAuth
+// sign-in flow (README, "Mistral subscription"). No key for it is committed, the same
+// rule hive's auth.json credential follows.
+assert.equal(settings.defaultProvider, "mistral");
+assert.equal(settings.defaultModel, "deepseek-v4-1-flash-1017");
+assert.equal(settings.defaultThinkingLevel, "max");
+assert.equal(settings.steeringMode, "all");
 assert(!Object.hasOwn(settings, "extensions"), "builtin MCP must not stay disabled now that the adapter is gone");
 assert(!Object.hasOwn(settings, "pi-browser-use"), "no browser config may linger in the template");
 assert(!sources.some((source) => source === "git:github.com/ttttmr/pi-devin-oauth"),
@@ -187,5 +200,5 @@ if (hive) {
 	assert(!Object.hasOwn(hive, "apiKey"),
 		"hive: no apiKey in models.json — the key belongs in auth.json via /login");
 }
-console.log("PASS: synced packages, standalone goal/subagents, hive default, models.json compat, "
+console.log("PASS: synced packages, standalone goal/subagents, mistral default, models.json compat, "
 	+ "browser autodetection, removed packages absent, no literal secrets");
