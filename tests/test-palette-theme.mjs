@@ -94,6 +94,15 @@ for (const hex of RAINBOW) {
 assert.match(banner, /const PALETTE = \["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"\]\.map\(parseColor\);/);
 assert(!/theme\.colors\.accent/.test(banner), "the banner must not derive its colours from the theme");
 
+// pi-pretty cannot import another extension's entry module, so it mirrors the banner's
+// five stops for the max-thinking prompt box. Pin the copy so the two cannot drift.
+const mirrored = read("extensions/pi-pretty/src/indicator/theme-stops.ts");
+assert.match(
+	mirrored,
+	new RegExp(`export const BANNER_STOPS: readonly string\\[\\] = \\[${RAINBOW.map((hex) => `"${hex}"`).join(", ")}\\];`),
+	"theme-stops.ts mirrors the banner's five stops exactly",
+);
+
 // ---------------------------------------------------------------------------
 // 3. The resting colour is a theme token, not a leftover hex.
 // ---------------------------------------------------------------------------
