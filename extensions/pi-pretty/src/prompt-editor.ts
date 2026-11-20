@@ -1,5 +1,5 @@
 import type { CustomEditor } from "@earendil-works/pi-coding-agent";
-import { sliceByColumn, stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
+import { sliceByColumn, visibleWidth } from "@earendil-works/pi-tui";
 
 /** Constructor shape used to preserve compatibility with older Pi hosts. */
 export type CustomEditorConstructor = new (...args: ConstructorParameters<typeof CustomEditor>) => CustomEditor;
@@ -15,6 +15,28 @@ const PROMPT_ICON = "❯";
 /** The icon plus its trailing space: with the rail in column 0 the icon lands in
  * column 1, so the slot carries no leading gap of its own. */
 const BOXED_PROMPT_WIDTH = 2;
+const DASH = "─";
+
+/**
+ * Length of the terminal escape sequence starting at `pos`, or 0 when there is
+ * none. Only CSI and OSC are handled; everything else falls back to the two-byte
+ * form, which is all a repaint has to step over.
+ */
+function escapeLength(text: string, pos: number): number {
+	if (text[pos] !== "\x1b") return 0;
+	const kind = text[pos + 1];
+	if (kind === "[") {
+		let end = pos + 2;
+		while (end < text.length && !(text[end] >= "@" && text[end] <= "~")) end += 1;
+		return Math.min(text.length, end + 1) - pos;
+	}
+	if (kind === "]") {
+		let end = pos + 2;
+		while (end < text.length && text[end] !== "\x07" && !(text[end] === "\x1b" && text[end + 1] === "\\")) end += 1;
+		return Math.min(text.length, end + 2) - pos;
+	}
+	return Math.min(text.length, pos + 2) - pos;
+}
 /**
  * Build a CustomEditor subclass that reserves room for, and renders, the
  * user-message prompt: a square box around the live input, with `❯` flush against
@@ -39,8 +61,9 @@ export function createPromptEditorClass(
 		private userPaddingX = 0;
 		private isScrolled = false;
 		private bottomBorderLine = "";
-		/** The colour the host handed us at construction; anything else on
-		 * `borderColor` later is a host override. */
+		/** The colour the host handed us at construction, used only when no resolver
+		 * is installed. Pi reassigns `borderColor` on every theme change, so it is not
+		 * treated as an override. */
 		private readonly inheritedBorderColor: PromptColor;
 		/** Resolved once per render so the probe is not repeated per line. */
 		private frame: PromptColor | undefined;
@@ -87,12 +110,43 @@ export function createPromptEditorClass(
 
 		private squareBorder(line: string, width: number, left: string, right: string): string {
 			if (width < 2 || visibleWidth(line) !== width) return line;
-			// The host hands back `borderColor(dashes)`, so the middle run already carries
-			// its own colour — at max thinking that is the level's red. Strip it and repaint
-			// column by column, otherwise only the two corners would take the frame colour.
-			const inner = [...stripTerminalSequences(sliceByColumn(line, 1, width - 2, true))];
-			const middle = inner.map((char, index) => this.paintFrame(char, index + 1, width)).join("");
+			const middle = this.paintDashes(sliceByColumn(line, 1, width - 2, true), width);
 			return `${this.paintFrame(left, 0, width)}${middle}${this.paintFrame(right, width - 1, width)}`;
+		}
+
+		/**
+		 * Repaint the box-drawing dashes column by column and copy every other byte
+		 * verbatim. `borderColor` wraps the whole run, so without this the dashes keep
+		 * the host's colour (the thinking-level red at max). Stripping the run instead
+		 * would flatten the top border's embedded working status, which is pi-pretty's
+		 * own shimmering indicator: the host composes the line as
+		 * `borderColor("── ") + status + borderColor(" ──…")`.
+		 */
+		private paintDashes(text: string, width: number): string {
+			let painted = "";
+			let column = 1;
+			let pos = 0;
+			while (pos < text.length) {
+				const skip = escapeLength(text, pos);
+				if (skip > 0) {
+					painted += text.slice(pos, pos + skip);
+					pos += skip;
+					continue;
+				}
+				if (text[pos] === DASH) {
+					painted += this.paintFrame(DASH, column, width);
+					column += 1;
+					pos += 1;
+					continue;
+				}
+				let end = pos;
+				while (end < text.length && text[end] !== "\x1b" && text[end] !== DASH) end += 1;
+				const run = text.slice(pos, end);
+				painted += run;
+				column += visibleWidth(run);
+				pos = end;
+			}
+			return painted;
 		}
 
 		/**

@@ -134,10 +134,11 @@ describe("prompt editor", () => {
 		expect(editor.render(12)[0]).toMatch(/^<inherited>┌<\/inherited>/);
 	});
 
-	it("repaints the whole border, not just the corners, when the host colours it", () => {
-		// pi-tui's Editor.renderTopBorder returns `borderColor(dashes)`, i.e. the dashes
-		// already carry the host's colour (thinking-level red at max). Slicing that run
-		// and painting only the corners leaves the red middle in place.
+	it("paints every dash itself when the host colours the border", () => {
+		// pi-tui's Editor.renderTopBorder returns `borderColor(dashes)`, i.e. the whole
+		// run is wrapped in the host's colour (thinking-level red at max). Repainting
+		// only the corners leaves the red dashes in place; the middle is only correct
+		// when each dash comes out carrying the frame colour.
 		class WrappedBorderEditor extends FakeEditor {
 			protected override renderTopBorder(width: number, hiddenLineCount: number): string {
 				return `\x1b[31m${super.renderTopBorder(width, hiddenLineCount)}\x1b[39m`;
@@ -155,9 +156,45 @@ describe("prompt editor", () => {
 		const editor = new PromptEditor(...([] as unknown as ConstructorParameters<CustomEditorConstructor>));
 
 		const lines = editor.render(20);
-		expect(lines[0]).not.toContain("\x1b[31m");
-		expect(lines[2]).not.toContain("\x1b[31m");
-		expect(lines[0]).toContain("\x1b[35m");
+		for (const line of [lines[0], lines[2]]) {
+			// No dash may be left to the host: drop the frame's own paint and nothing
+			// but the corners' siblings may remain.
+			expect((line ?? "").split("\x1b[35m─\x1b[39m").join("")).not.toContain("─");
+			expect(visibleWidth(line ?? "")).toBe(20);
+		}
+	});
+
+	it("leaves the working status embedded in the top border untouched", () => {
+		// pi-pretty forces embedWorkingStatus, so the host composes the top border as
+		// borderColor("── ") + status + borderColor(" ──…") and the status is
+		// pi-pretty's own indicator. Repainting the run wholesale flattens its shimmer.
+		const status = "\x1b[1m\x1b[38;2;9;8;7m● Thinking\x1b[39m\x1b[22m";
+		class StatusBorderEditor extends FakeEditor {
+			protected override renderTopBorder(width: number, _hiddenLineCount: number): string {
+				return `── ${status} ${"─".repeat(width - 14)}`;
+			}
+		}
+		const ramp = (text: string, col: number): string => `\x1b[38;2;${col};0;0m${text}\x1b[39m`;
+		const PromptEditor = createPromptEditorClass(
+			StatusBorderEditor as unknown as CustomEditorConstructor,
+			ramp,
+			() => ramp,
+		);
+		const editor = new PromptEditor(...([] as unknown as ConstructorParameters<CustomEditorConstructor>));
+
+		const top = editor.render(40)[0] ?? "";
+		// the indicator keeps its own bold + truecolor, byte for byte
+		expect(top).toContain(status);
+		// the ramp resumes at the right column: "── " + status(10 cols) + " " puts the
+		// next dash in column 15, so the status width is counted, not guessed
+		expect(top).toContain("\x1b[38;2;15;0;0m─");
+		// and no dash is left outside the frame's paint
+		let leftover = top;
+		for (let column = 0; column <= 40; column += 1) {
+			leftover = leftover.split(`\x1b[38;2;${column};0;0m─\x1b[39m`).join("");
+		}
+		expect(leftover).not.toContain("─");
+		expect(visibleWidth(top)).toBe(40);
 	});
 
 	it("paints the frame and the icon through a positional gradient", () => {
