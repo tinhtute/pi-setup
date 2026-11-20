@@ -12,5 +12,8 @@
   "thinkingIndicator": {
     "enabled": true,
     "intervalMs": 33
+  },
+  "prompt": {
+    "border": "accent"
   }
 }
