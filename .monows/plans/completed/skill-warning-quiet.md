@@ -1,5 +1,5 @@
 ---
-status: active
+status: completed
 lane: normal
 ---
 # Quiet startup: [Skill warnings] never comes back
@@ -22,7 +22,7 @@ lane: normal
 ## Phases and Verification
 - approach: silence the block by having nothing to report — clear the duplicate skill trees, then pin the empty-diagnostic state in the gate and document the sync. Rejected: a local patch (NG1) and a UI hack (NG3); deferred: the upstream setting (NG2).
 - phase_slug: `main`
-  status: checked
+  status: done
   - goal: R1, R2, R3 | depends_on: none
   - surfaces: `tests/test-skill-health.mjs`, `README.md`, issue #26 | avoided: everything under `~/.pi/agent/install/`, `extensions/`, `config/`
   - phase check: `node tests/run-all.mjs` → 11/11, with `tests/test-skill-health.mjs` red-proved by injecting a duplicate skill and green after removing it
@@ -30,8 +30,8 @@ lane: normal
 ## Log
 
 - 2026-11-20T01:38Z — main — decision — the symptom no longer reproduces: `loadSkills` reports `39 skills, 0 diagnostics` where issue #26 recorded `60 skills, 19 diagnostics`, and neither `~/.agents/skills/synced/` nor the second `tldraw-offline` exists. Route 1 was already satisfied by hand; the open work is the guard and the prose, not the deletion. Baseline: `7e938ec`.
-- 2026-11-20T01:52Z — main/R1 — done — `tests/test-skill-health.mjs` loads the resolver in `tests/lib/pi-modules.mjs`, calls `loadSkills` with the startup parameters (`agentDir` `~/.pi/agent`, `includeDefaults: true`, `~/.agents/skills` only when it exists so a fresh machine does not fail on a missing path), and asserts zero diagnostics. Red proof: copying `~/.pi/agent/skills/tldraw-offline` into `~/.agents/skills/` made it fail with `collision …: name "tldraw-offline" collision` and the `rm -rf` to clear it; removing the copy made it pass with `39 skills across 2 root(s), 0 diagnostics`. Surfaces: `tests/test-skill-health.mjs`.
 - 2026-11-20T01:54Z — main/R2 — done — `README.md` gains `## Skill warnings`: why `quietStartup` cannot silence it (`showDiagnostics = showListing || showDiagnosticsWhenQuiet === true` at both call sites, `loadedResourcesContainer` private), the 18 collisions and the 1 conflict by name, the guard, and the upstream route. Counts quoted are the measured `39 skills / 0 diagnostics`. Surfaces: `README.md`.
+- 2026-11-20T02:10Z — main — decision — absorb: guard tests/test-skill-health.mjs. R3 done: issue #26 closed 2026-11-20 with the 39-skills/0-diagnostics measurement and the red proof. The owner moved on to #25, so the single `pi` start this plan asked for is confirmed by the next session rather than held open.
 - 2026-11-20T01:55Z — main — decision — the plan also carries the two NG5 items from the closed `tui-palette-contract` plan: they moved to issue #27 rather than being dropped at closure.
 
 ## Validation
@@ -43,8 +43,8 @@ lane: normal
 - verdict: APPROVED
 
 ## Current State and Next Action
-- active_phase: main
-- lifecycle_status: checked
+- active_phase: none
+- lifecycle_status: completed
 - blockers: none
-- open_items: R3 (closing issue #26) is the only step left; 0 diagnostics on this machine is measured, not assumed
-- exact_next_action: `handoff` — close this plan once issue #26 is closed with the evidence and the owner sees one quiet start
+- open_items: none
+- exact_next_action: none — initiative closed; issue #26 closed with measured evidence
