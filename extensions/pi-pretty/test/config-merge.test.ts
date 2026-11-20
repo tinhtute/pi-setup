@@ -104,6 +104,18 @@ describe("loadConfig", () => {
 		expect(config.getDefaultAgentDir()).toBe(join(home, ".pi", "agent"));
 		expect(config.loadConfig()).toEqual({ disableTools: ["grep"] });
 	});
+
+	it("keeps a valid prompt border and drops the rest", async () => {
+		const { loadConfig } = await freshModule<typeof import("../src/config.js")>("../src/config.js");
+		expect(loadConfig(makeConfigDir(JSON.stringify({ prompt: { border: "accent" } })))).toEqual({
+			prompt: { border: "accent" },
+		});
+		expect(loadConfig(makeConfigDir(JSON.stringify({ prompt: { border: "#1e1e2e" } })))).toEqual({
+			prompt: { border: "#1e1e2e" },
+		});
+		expect(loadConfig(makeConfigDir(JSON.stringify({ prompt: { border: "magenta" } })))).toEqual({});
+		expect(loadConfig(makeConfigDir(JSON.stringify({ prompt: { border: 42 } })))).toEqual({});
+	});
 });
 
 describe("applyConfig", () => {
