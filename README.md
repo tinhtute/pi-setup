@@ -634,6 +634,36 @@ here. Sessions, caches, the browser profile, `auth.json`, `antigravity-accounts.
 and `models-store.json` are machine-local state and are gitignored. Orca manages
 its generated `orca-*` extensions separately; they are not copied into this repo.
 
+## Skill warnings
+
+`[Skill warnings]` is the one startup block `quietStartup: true` does not silence. The
+setting hides the `[Extensions]`/`[Skills]`/`[Prompts]` listing; diagnostics are painted by a
+separate container that is passed `showDiagnosticsWhenQuiet: true` at both the startup and
+the `/reload` call sites. So the block is silenced by having nothing to report, not by
+configuration — and no local switch or `ctx.ui.setHeader` reaches it, because that container
+is private to `InteractiveMode`.
+
+On 2026-11-19 it cost 19 lines on every start and every `/reload`, all of it duplication
+rather than broken skills:
+
+- **18 name collisions** from `~/.agents/skills/synced/<uuid>_<uuid>/` carrying nine skills
+twice — `docs`, `docx`, `google-workspace`, `import-memory`, `morning`, `pdf`, `pptx`,
+`skill-creator`, `xlsx`.
+- **1 conflict** on `tldraw-offline`, present in both `~/.pi/agent/skills/` and
+`~/.agents/skills/`.
+
+Both duplicate trees were removed the same day, and the machine now loads 39 skills with 0
+diagnostics. The synced buckets come from an external sync, so they can come back:
+`node tests/test-skill-health.mjs` calls the same `loadSkills` Pi calls at startup and fails
+the moment it reports anything, naming the colliding pairs and printing the `rm -rf` that
+clears them. It runs as part of `node tests/run-all.mjs`, so a reappearing sync bucket fails
+the gate instead of costing 19 lines a start.
+
+Pi itself would still be quieter if startup diagnostics followed `quietStartup`, or collapsed
+into one summary line that `/resources` expands. That is an upstream change; this setup runs
+the stock release (see “Pi release fixes that matter here”), so the guard plus the cleanup is
+the local answer.
+
 ## Uninstall
 
 Remove what was installed:
