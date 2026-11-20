@@ -499,6 +499,18 @@ Everything except `background.*` is read once at startup, so a config change nee
 **restart**, not just `/reload`. The file used to carry `toolStyle: "claudecode"`; that
 style and its key are gone, so the template no longer ships it.
 
+`prompt.border` colours the prompt box's square frame (`┌ ┐ └ ┘` with `│` rails, `❯` flush
+against the left rail). The default, `"border"`, is the Pi theme's own border token, so the
+frame moves with `/theme`; the host used to hand the editor `borderMuted`, which reads as a
+fixed grey on themes whose muted border is near-neutral. `"accent"` follows the theme accent
+instead, and a `#rrggbb` bypasses the theme; anything else falls back to `"border"`. The key
+is read at startup like the others, so changing it needs a restart.
+
+The frame still yields to Pi: when the host recolours `editor.borderColor` — thinking levels,
+`!` bash mode — that colour wins, and with no palette from the extension the inherited colour
+is used. `extensions/pi-pretty/test/prompt-editor.test.ts` pins the token lookup, the host
+override and the fallback.
+
 `icons` and `PRETTY_ICONS` went with the `ls` renderer: pi-pretty draws no tree view any
 more, so there is no icon table left to switch off and the extension needs no Nerd Font.
 `theme` drives the `read` preview's syntax highlighting and must name a **bundled Shiki**
