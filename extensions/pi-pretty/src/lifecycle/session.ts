@@ -17,7 +17,7 @@ import type {
 	MessageUpdateEvent,
 } from "@earendil-works/pi-coding-agent";
 import * as hostSdk from "@earendil-works/pi-coding-agent";
-import { getDefaultAgentDir, type PrettyConfig } from "../config.js";
+import { fgFromHex, getDefaultAgentDir, type PrettyConfig } from "../config.js";
 import { installGradientLabels, uninstallGradientLabels } from "../indicator/gradient.js";
 import { createPromptEditorClass } from "../prompt-editor.js";
 import type { PiPrettyDeps } from "../types.js";
@@ -69,12 +69,27 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		const editorUi = ctx.ui as unknown as EditorUiCompatibility;
 		if (typeof editorUi.setEditorComponent !== "function") return;
 		previousEditorFactory = editorUi.getEditorComponent?.();
-		const PromptEditor = createPromptEditorClass(hostCustomEditor, (icon) => {
-			const theme = ctx.ui.theme;
-			return typeof theme.getThinkingBorderColor === "function"
-				? theme.getThinkingBorderColor(ctx.thinkingLevel ?? "off")(icon)
-				: theme.fg("thinkingText", icon);
-		});
+		const PromptEditor = createPromptEditorClass(
+			hostCustomEditor,
+			(icon) => {
+				const theme = ctx.ui.theme;
+				return typeof theme.getThinkingBorderColor === "function"
+					? theme.getThinkingBorderColor(ctx.thinkingLevel ?? "off")(icon)
+					: theme.fg("thinkingText", icon);
+			},
+			// Read per render so `/theme` moves the frame; `prompt.border` picks the token,
+			// and a hex bypasses the theme entirely.
+			() => {
+				const theme = ctx.ui.theme;
+				const setting = config.prompt?.border ?? "border";
+				if (setting !== "border" && setting !== "accent") {
+					const fromHex = fgFromHex(setting);
+					if (fromHex) return fromHex;
+				}
+				const token = setting === "accent" ? "accent" : "border";
+				return (text: string) => theme.fg(token, text);
+			},
+		);
 		editorUi.setEditorComponent((tui, theme, keybindings) => new PromptEditor(tui, theme, keybindings));
 		promptEditorInstalled = true;
 	};

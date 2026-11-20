@@ -34,6 +34,12 @@ export interface ThinkingIndicatorConfig {
 	intervalMs?: number;
 }
 
+export interface PromptConfig {
+	/** Frame colour: a pi theme token (`border`, `accent`) or a `#rrggbb` hex.
+	 * Absent or invalid means `border`. */
+	border?: string;
+}
+
 export interface PrettyConfig {
 	background?: {
 		tool?: string;
@@ -46,6 +52,7 @@ export interface PrettyConfig {
 	cacheLimit?: number;
 	workingIndicator?: WorkingIndicatorConfig;
 	thinkingIndicator?: ThinkingIndicatorConfig;
+	prompt?: PromptConfig;
 }
 
 /** Normalize a comma-separated env value or JSON array into tool names. */
@@ -117,6 +124,13 @@ export function loadConfig(agentDir = getConfigDir()): PrettyConfig {
 			if (typeof src.intervalMs === "number" && Number.isFinite(src.intervalMs) && src.intervalMs >= 33)
 				wi.intervalMs = src.intervalMs;
 			if (Object.keys(wi).length > 0) config.workingIndicator = wi;
+		}
+		const prompt = parsed.prompt;
+		if (prompt && typeof prompt === "object") {
+			const border = (prompt as Record<string, unknown>).border;
+			if (border === "border" || border === "accent" || (typeof border === "string" && isHexColor(border))) {
+				config.prompt = { border };
+			}
 		}
 		const thinkingIndicator = parsed.thinkingIndicator;
 		if (thinkingIndicator && typeof thinkingIndicator === "object") {

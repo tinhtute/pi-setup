@@ -67,6 +67,19 @@ function hexToAnsiBg(hex: string): string | null {
 	return `\x1b[48;2;${r};${g};${b}m`;
 }
 
+/** Foreground painter for a `#rrggbb` (or bare `rrggbb`) colour, or null when the
+ * hex is malformed. Used for configurable frame colours that must not depend on
+ * the theme's token set. */
+export function fgFromHex(hex: string): ((text: string) => string) | null {
+	const m = hex.match(/^#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
+	if (!m) return null;
+	const r = Number.parseInt(m[1], 16);
+	const g = Number.parseInt(m[2], 16);
+	const b = Number.parseInt(m[3], 16);
+	const open = `\x1b[38;2;${r};${g};${b}m`;
+	return (text: string) => `${open}${text}\x1b[39m`;
+}
+
 function applyPrettyConfigBg(agentDir?: string): boolean {
 	const config = loadConfig(agentDir);
 	if (!config.background?.tool) return false;
