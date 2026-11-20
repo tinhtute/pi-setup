@@ -491,7 +491,8 @@ otherwise prints a diff — the live file is the one a person tunes:
     "low": "dim", "stops": "theme", "bold": true,
     "intervalMs": 33
   },
-  "thinkingIndicator": { "enabled": true, "intervalMs": 33 }
+  "thinkingIndicator": { "enabled": true, "intervalMs": 33 },
+  "prompt": { "border": "accent" }
 }
 ```
 
@@ -500,16 +501,26 @@ Everything except `background.*` is read once at startup, so a config change nee
 style and its key are gone, so the template no longer ships it.
 
 `prompt.border` colours the prompt box's square frame (`┌ ┐ └ ┘` with `│` rails, `❯` flush
-against the left rail). The default, `"border"`, is the Pi theme's own border token, so the
-frame moves with `/theme`; the host used to hand the editor `borderMuted`, which reads as a
-fixed grey on themes whose muted border is near-neutral. `"accent"` follows the theme accent
-instead, and a `#rrggbb` bypasses the theme; anything else falls back to `"border"`. The key
-is read at startup like the others, so changing it needs a restart.
+against the left rail). Absent, the key falls back to `"border"`, Pi's own border token — the colour its reload box and
+dialogs use. The shipped template names `"accent"` instead, so the box matches the accent the
+footer and reply pills are painted with; the host used to hand the editor `borderMuted`, which
+reads as a fixed grey on themes whose muted border is near-neutral. A `#rrggbb` bypasses the
+theme, and anything unrecognised falls back to `"border"`. The key is read at startup like the
+others, so changing it needs a restart.
 
-The frame still yields to Pi: when the host recolours `editor.borderColor` — thinking levels,
-`!` bash mode — that colour wins, and with no palette from the extension the inherited colour
-is used. `extensions/pi-pretty/test/prompt-editor.test.ts` pins the token lookup, the host
-override and the fallback.
+At `thinkingLevel: "max"` the box — frame and `❯` icon — sweeps the banner's five stops
+(`#22d3ee` → `#60a5fa` → `#a78bfa` → `#f472b6` → `#fb923c`) instead of taking the level's flat
+red, interpolated across the box width. The list is mirrored in
+`extensions/pi-pretty/src/indicator/theme-stops.ts` because an extension cannot import another
+extension's entry module, and `tests/test-palette-theme.mjs` fails if the two drift. Every
+other level keeps `prompt.border`.
+
+Outside that, the frame does **not** follow Pi's `editor.borderColor`. Pi reassigns that field at startup and
+on every theme change to the current thinking level's colour, so honouring it would mean the
+key never applies while thinking is on — the `❯` icon is what carries the thinking level
+(it always has). With no palette from the extension the inherited colour is used.
+`extensions/pi-pretty/test/prompt-editor.test.ts` pins the token lookup, the thinking-level
+assignment and the fallback.
 
 `icons` and `PRETTY_ICONS` went with the `ls` renderer: pi-pretty draws no tree view any
 more, so there is no icon table left to switch off and the extension needs no Nerd Font.
