@@ -4,8 +4,10 @@ Working note. What `@earendil-works/pi-durable` is, how its durability actually
 works, and what it does not do. Notes only — nothing here is installed by
 `setup/install.sh`, and Pi Durable does not replace the Pi coding agent.
 
-Checked against `@earendil-works/pi-durable@1.4.0` on 2026-10-29, the same
-minor as the `@earendil-works/pi-coding-agent@1.4.0` this repo configures.
+Re-checked against `@earendil-works/pi-durable@1.5.2` on 2026-11-19, the same
+minor as the `@earendil-works/pi-coding-agent@1.5.2` this repo now runs.
+Official sources only: the published package, its CHANGELOG, and the Earendil
+repository.
 
 ## What it is
 
@@ -24,6 +26,32 @@ cancellation, telemetry context) with the coding agent.
 
 The API changes between releases. Treat any code in these notes as a sketch.
 
+## Changes in 1.5 that matter here
+
+1.5.0 is a breaking release, so 1.4.0 sample code does not compile. The parts
+that change how an integration is shaped:
+
+- Tool schemas come from `@earendil-works/pi-schema` (`obj`, `str`, `num`), not
+  `@earendil-works/pi-ai`'s TypeBox re-export; `typebox` is no longer a
+  dependency.
+- `Storage.commit(batches, receive, context)` replaces
+  `commit(writes, adopt, context)`: one call stores a group of commits, each its
+  own atomic commit, and reports `{ stored, refused? }`. Custom backends must
+  migrate; `commitWrites()` from `/testing` seeds a storage the old way.
+- `watchEvents()` and the `AgentEvent` stream are gone. Clients render committed
+  state from `watch()` instead, so every fact a renderer needs lives in the
+  conversation view rather than in an event type.
+- A conversation view's `entries` is a window (50 at attach, up to 100), not the
+  whole transcript; older entries are paged with `entries()`.
+- Streamed progress is stored in batches: watchers see each update at once, but
+  storage receives them with the next dependent commit and at latest after
+  `settings.progress.persistWithinMs` (default 1,000 ms). Set it to `0` for the
+  old one-write-per-partial behaviour.
+- A task cut off `settings.restartLimit` times in a row now **ends** (with
+  diagnostic code `restart_limit`, reported as `task_interrupted`) instead of
+  being parked for `retry()`; recover by resuming the work with
+  `session.continue()` or a new submission.
+
 ## Core model
 
 | Concept | What it is |
@@ -41,7 +69,8 @@ The API changes between releases. Treat any code in these notes as a sketch.
 
 Two vocabulary notes, because the same thing has three names across the stack:
 Pi Durable says *conversation*, the Cloudflare `PiHarness` wrapper says *session*
-(root id `"1"`), and some newer vendor docs say *lane*. See
+(root id `"1"`), and some third-party write-ups say *lane* — a word that appears
+nowhere in 1.5.2's README or `dist`. See
 [pi-durable-cloudflare.md](pi-durable-cloudflare.md#vocabulary).
 
 ## Durability semantics
@@ -50,7 +79,13 @@ These are the behaviours that matter, and they are what make the design
 different from "write a JSON file at the end of the turn":
 
 - Model request cut off mid-stream: the partial answer stays in the transcript,
-  marked aborted, and the request is sent again.
+  marked aborted, and the request is sent again — it counts as a failed attempt
+  under `settings.retry`, so it waits for the backoff first. With no retry left
+  the run ends unanswered with reason `interrupted`. How much of the stream
+  survives is bounded by `settings.progress.persistWithinMs` (default 1,000 ms).
+- Work that keeps crashing its process ends instead of looping: after
+  `settings.restartLimit` cuts in a row (default 5) a tool call gets a
+  `restart_limit` error result and a model request ends its run `restart_limit`.
 - Tool cut off: it reruns **only** if it declares `replay: "safe"`. Otherwise the
   model is told the call was interrupted, with the output stored so far, and
   decides what to do.
@@ -120,11 +155,13 @@ themselves and look things up later.
 ## Multiplayer and UI
 
 Everything a UI needs is committed state, so any number of clients can attach to
-any conversation: a snapshot first, then only what changes. `watch()` delivers the
-exact operations of each commit (small, socket-friendly); `watchEvents()` turns
-them into the coding agent's familiar events at the cost of more bytes.
-`submit(..., { whenBusy: "steer" })` joins the running work after the current
-tool round; the default queues a follow-up as its own run.
+any conversation: a value first, then each commit with its exact operations
+(small, socket-friendly), which a client applies with `applyImmutable()` from
+`@earendil-works/chord/delta`. The watch lives in memory, so a restarted process
+means a new watch; a reconnect is cheap because the value is a window and
+`watch(from)` sends only the entries a client missed. `submit(..., { whenBusy:
+"steer" })` joins the running work after the current tool round; the default
+queues a follow-up as its own run.
 
 ## Size and examples
 
@@ -142,10 +179,13 @@ Pi Durable itself:
 - Experimental; the API moves between releases.
 - No built-in approval or permission step for tool calls; build one with a
   [`beforeTool` hook plus `api.memo`](https://earendil.com/posts/pi-durable/).
-- No event replay: a stream always starts from a snapshot.
+- No persisted cursor: a watch is in-memory and starts from a window of entries,
+  not an event log you can seek.
 - `abort()` waits until the conversation is idle; a tool that ignores its signal
   keeps it busy.
 - No conversation deletion.
+- A Pi minor is one-way for storage: a conversation written by 1.5 is unreadable
+  to 1.4.
 - TypeScript by choice ("the easiest way to bootstrap this"), with a Rust port
   not ruled out.
 
@@ -158,8 +198,10 @@ session does not drain on eviction.
 ## Sources
 
 - Pi Durable announcement — <https://earendil.com/posts/pi-durable/>
-- `packages/durable/README.md` at tag `v1.4.0` —
-  <https://github.com/earendil-works/pi/blob/v1.4.0/packages/durable/README.md>
-- npm — <https://www.npmjs.com/package/@earendil-works/pi-durable>
+- `@earendil-works/pi-durable@1.5.2` `README.md` (storage backends, `onWake`,
+  restart limit) and `CHANGELOG.md` (1.5.0 breaking changes, 1.5.1, 1.5.2) —
+  <https://www.npmjs.com/package/@earendil-works/pi-durable>
+- `packages/durable/README.md` at tag `v1.5.2` —
+  <https://github.com/earendil-works/pi/blob/v1.5.2/packages/durable/README.md>
 - Cloudflare Agents docs, Pi harness (limitations) —
   <https://developers.cloudflare.com/agents/harnesses/pi/>
