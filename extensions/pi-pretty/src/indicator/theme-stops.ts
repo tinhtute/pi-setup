@@ -16,6 +16,13 @@
 import { THEME_STOPS, type WorkingStops } from "./stops.js";
 import type { ThemeColorLike, WorkingThemeLike } from "./types.js";
 
+/**
+ * The banner's fixed five stops, mirrored here because an extension must not import
+ * another extension's entry module. `tests/test-palette-theme.mjs` fails if the two
+ * lists drift, so this is a copy, not a second source of truth.
+ */
+export const BANNER_STOPS: readonly string[] = ["#22d3ee", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"];
+
 /** Fractions toward black (negative) and white (positive); the accent sits in the middle. */
 export const RAMP_STEPS: readonly number[] = [-0.42, -0.2, 0, 0.22, 0.45];
 

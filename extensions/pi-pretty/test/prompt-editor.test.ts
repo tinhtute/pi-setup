@@ -134,7 +134,50 @@ describe("prompt editor", () => {
 		expect(editor.render(12)[0]).toMatch(/^<inherited>┌<\/inherited>/);
 	});
 
-	it("lets a host-assigned border colour win over the configured token", () => {
+	it("repaints the whole border, not just the corners, when the host colours it", () => {
+		// pi-tui's Editor.renderTopBorder returns `borderColor(dashes)`, i.e. the dashes
+		// already carry the host's colour (thinking-level red at max). Slicing that run
+		// and painting only the corners leaves the red middle in place.
+		class WrappedBorderEditor extends FakeEditor {
+			protected override renderTopBorder(width: number, hiddenLineCount: number): string {
+				return `\x1b[31m${super.renderTopBorder(width, hiddenLineCount)}\x1b[39m`;
+			}
+
+			protected override renderBottomBorder(width: number, hiddenLineCount: number): string {
+				return `\x1b[31m${super.renderBottomBorder(width, hiddenLineCount)}\x1b[39m`;
+			}
+		}
+		const PromptEditor = createPromptEditorClass(
+			WrappedBorderEditor as unknown as CustomEditorConstructor,
+			(text) => text,
+			() => (text) => `\x1b[35m${text}\x1b[39m`,
+		);
+		const editor = new PromptEditor(...([] as unknown as ConstructorParameters<CustomEditorConstructor>));
+
+		const lines = editor.render(20);
+		expect(lines[0]).not.toContain("\x1b[31m");
+		expect(lines[2]).not.toContain("\x1b[31m");
+		expect(lines[0]).toContain("\x1b[35m");
+	});
+
+	it("paints the frame and the icon through a positional gradient", () => {
+		const ramp = (text: string, col: number): string => `\x1b[38;2;${col};0;0m${text}\x1b[39m`;
+		const PromptEditor = createPromptEditorClass(
+			fakeEditorClass,
+			ramp,
+			() => ramp,
+		);
+		const editor = new PromptEditor(...([] as unknown as ConstructorParameters<CustomEditorConstructor>));
+
+		const top = editor.render(20)[0];
+		const colours = new Set(top.match(/\x1b\[38;2;\d+;0;0m/g) ?? []);
+		expect(colours.size).toBeGreaterThan(2);
+		expect(editor.render(20)[1]).toMatch(/\x1b\[38;2;1;0;0m❯/);
+	});
+
+	it("keeps the configured token when Pi assigns a thinking-level border", () => {
+		// interactive-mode calls updateEditorBorderColor() at startup and on every theme
+		// change, so a host assignment is the steady state, not a transient override.
 		const PromptEditor = createPromptEditorClass(
 			fakeEditorClass,
 			(text) => text,
@@ -143,8 +186,8 @@ describe("prompt editor", () => {
 		const editor = new PromptEditor(...([] as unknown as ConstructorParameters<CustomEditorConstructor>));
 		expect(editor.render(12)[0]).toMatch(/^<frame>┌/);
 
-		editor.borderColor = (text: string) => `<thinking>${text}</thinking>`;
-		expect(editor.render(12)[0]).toMatch(/^<thinking>┌/);
+		editor.borderColor = (text: string) => `<thinkingMax>${text}</thinkingMax>`;
+		expect(editor.render(12)[0]).toMatch(/^<frame>┌/);
 	});
 
 	it("keeps every line at width when a scroll indicator rides the top border", () => {
@@ -199,6 +242,56 @@ describe("prompt editor", () => {
 		expect(editor.render(40)).toEqual(["top", " ❯ draft", "bottom", "completion"]);
 	});
 
+	it("sweeps the banner five-stop ramp across the box at max thinking", async () => {
+		vi.stubEnv("PRETTY_WORKING_INDICATOR", "off");
+		let editorFactory: unknown;
+		const handlers = new Map<string, (event: unknown, ctx: unknown) => unknown>();
+		const pi = {
+			registerMarkdownTransformer: () => {},
+			registerFlag: () => {},
+			registerTool: () => {},
+			registerCommand: () => {},
+			on: (name: string, handler: (event: unknown, ctx: unknown) => unknown) => handlers.set(name, handler),
+		};
+		const ui = {
+			theme: {
+				fg: (color: string, text: string) => `<${color}>${text}</${color}>`,
+				getThinkingBorderColor: (level: string) => (text: string) => `<thinking:${level}>${text}</thinking:${level}>`,
+				colors: { accent: { r: 200, g: 100, b: 255 } },
+			},
+			setEditorComponent: (factory: unknown) => {
+				editorFactory = factory;
+			},
+			getEditorComponent: () => undefined,
+			setToolsExpanded: () => {},
+			setWorkingVisible: () => {},
+		};
+		const ctx = {
+			mode: "tui",
+			cwd: process.cwd(),
+			ui,
+			thinkingLevel: "max",
+			sessionManager: { getSessionName: () => undefined },
+		};
+
+		await piPrettyExtension(pi as never, { sdk: {}, customEditorClass: fakeEditorClass });
+		await handlers.get("session_start")?.({}, ctx);
+
+		const factory = editorFactory as (tui: unknown, theme: unknown, keybindings: unknown) => { render(w: number): string[] };
+		const editor = factory(undefined, undefined, undefined);
+		const [top, row] = editor.render(40);
+		const shades = new Set(top?.match(/\x1b\[38;2;\d+;\d+;\d+m/g) ?? []);
+		expect(shades.size).toBeGreaterThan(2);
+		// the banner's own stops: cyan at column 0, orange at the last column
+		expect(top).toContain("\x1b[38;2;34;211;238m┌");
+		expect(top).toContain("\x1b[38;2;251;146;60m┐");
+		expect(top).not.toContain("<thinking:max>");
+		expect(row).toMatch(/\x1b\[38;2;\d+;\d+;\d+m❯/);
+		expect(row).not.toContain("<thinking:max>❯");
+
+		await handlers.get("session_shutdown")?.({}, ctx);
+	});
+
 	it("installs the prompt editor only through the host's public editor API", async () => {
 		vi.stubEnv("PRETTY_WORKING_INDICATOR", "off");
 		let editorFactory: unknown;
@@ -222,7 +315,7 @@ describe("prompt editor", () => {
 			setToolsExpanded: () => {},
 			setWorkingVisible: () => {},
 		};
-		let thinkingLevel = "max";
+		let thinkingLevel = "high";
 		const ctx = {
 			mode: "tui",
 			cwd: process.cwd(),
@@ -241,9 +334,12 @@ describe("prompt editor", () => {
 			render(width: number): string[];
 		};
 		const editor = factory(undefined, undefined, undefined);
-		expect(editor.render(40)[1]).toContain("<max>❯</max>");
-		thinkingLevel = "high";
 		expect(editor.render(40)[1]).toContain("<high>❯</high>");
+		thinkingLevel = "low";
+		expect(editor.render(40)[1]).toContain("<low>❯</low>");
+		// max is the one level the banner ramp owns instead of the level colour
+		thinkingLevel = "max";
+		expect(editor.render(40)[1]).toMatch(/\x1b\[38;2;\d+;\d+;\d+m❯/);
 
 		await handlers.get("session_shutdown")?.({}, ctx);
 		expect(editorFactory).toBeUndefined();

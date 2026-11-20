@@ -19,6 +19,8 @@ import type {
 import * as hostSdk from "@earendil-works/pi-coding-agent";
 import { fgFromHex, getDefaultAgentDir, type PrettyConfig } from "../config.js";
 import { installGradientLabels, uninstallGradientLabels } from "../indicator/gradient.js";
+import { gradientAnsiAt } from "../indicator/stops.js";
+import { BANNER_STOPS } from "../indicator/theme-stops.js";
 import { createPromptEditorClass } from "../prompt-editor.js";
 import type { PiPrettyDeps } from "../types.js";
 import {
@@ -69,12 +71,21 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 		const editorUi = ctx.ui as unknown as EditorUiCompatibility;
 		if (typeof editorUi.setEditorComponent !== "function") return;
 		previousEditorFactory = editorUi.getEditorComponent?.();
+		// At max thinking the prompt box -- frame and icon alike -- sweeps the banner's five
+		// stops instead of taking the level's flat red. Every other level keeps the palette the
+		// host and `prompt.border` define.
+		const gradient = (text: string, column: number, width: number): string => {
+			const position = width > 1 ? column / (width - 1) : 0;
+			return `${gradientAnsiAt(BANNER_STOPS, position)}${text}\x1b[39m`;
+		};
 		const PromptEditor = createPromptEditorClass(
 			hostCustomEditor,
-			(icon) => {
+			(icon, column, width) => {
 				const theme = ctx.ui.theme;
+				const level = ctx.thinkingLevel ?? "off";
+				if (level === "max") return gradient(icon, column, width);
 				return typeof theme.getThinkingBorderColor === "function"
-					? theme.getThinkingBorderColor(ctx.thinkingLevel ?? "off")(icon)
+					? theme.getThinkingBorderColor(level)(icon)
 					: theme.fg("thinkingText", icon);
 			},
 			// Read per render so `/theme` moves the frame; `prompt.border` picks the token,
@@ -82,12 +93,16 @@ export function installSessionLifecycle(options: SessionLifecycleOptions): void 
 			() => {
 				const theme = ctx.ui.theme;
 				const setting = config.prompt?.border ?? "border";
+				const level = ctx.thinkingLevel ?? "off";
+				if (level === "max") {
+					return (text: string, column: number, width: number) => gradient(text, column, width);
+				}
 				if (setting !== "border" && setting !== "accent") {
 					const fromHex = fgFromHex(setting);
 					if (fromHex) return fromHex;
 				}
-				const token = setting === "accent" ? "accent" : "border";
-				return (text: string) => theme.fg(token, text);
+				const picked = setting === "accent" ? "accent" : "border";
+				return (text: string) => theme.fg(picked, text);
 			},
 		);
 		editorUi.setEditorComponent((tui, theme, keybindings) => new PromptEditor(tui, theme, keybindings));
